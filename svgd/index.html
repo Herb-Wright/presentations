@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="author" content="Herbie Wright">
+  <title>Stein Variational Gradient Descent</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.9.2/css/reset.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.9.2/css/reveal.css">
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.9.2/css/theme/white.css" id="theme">
+  <!-- Printing and PDF exports -->
+  <script>
+    var link = document.createElement( 'link' );
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = window.location.search.match( /print-pdf/gi ) ? 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.9.2/css/print/pdf.css' : 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.9.2/css/print/paper.css';
+    document.getElementsByTagName( 'head' )[0].appendChild( link );
+  </script>
+  <!--[if lt IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.9.2/lib/js/html5shiv.js"></script>
+  <![endif]-->
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.jskatex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+   var mathElements = document.getElementsByClassName("math");
+   for (var i = 0; i < mathElements.length; i++) {
+    var texText = mathElements[i].firstChild;
+    if (mathElements[i].tagName == "SPAN") {
+     katex.render(texText.data, mathElements[i], {
+      displayMode: mathElements[i].classList.contains('display'),
+      throwOnError: false,
+      fleqn: false
+     });
+  }}});
+  </script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.jskatex.min.css" />
+  <style>
+  /* body {
+      background-color: black;
+  } */
+
+  * {
+      font-family: serif;
+  }
+
+  img {
+      border: none !important;
+  }
+
+  h2 {
+      font-size: 3rem !important;
+  }
+
+  p, li {
+      font-size: 1.7rem;
+      /* text-align: left; */
+      margin-bottom: 0.5rem;
+      margin-top: 0.5rem;
+  }
+
+  div.sourceCode {
+      margin: 0.5rem 0;
+  }
+
+  .katex-display {
+      margin: 1.25rem 0 !important;
+  }
+
+  .references p {
+      font-size: 1.0rem;
+      text-align: left;
+      margin: 0.25rem
+  }
+
+  #title-slide .title {
+      /* border-color: black; */
+      border: 6px solid black;
+      border-right: none;
+      border-top: none;
+      border-bottom: none;
+      padding: 16px 0px
+  }
+
+  /* 
+  #title-slide * {
+      color: white !important;
+  } */
+
+  </style>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css" integrity="sha384-wcIxkf4k558AjM3Yz3BBFQUbk/zgIYC2R0QpeeYb+TwlBVMrlgLqwRjRtGZiK7ww" crossorigin="anonymous">
+
+  <!-- The loading of KaTeX is deferred to speed up page rendering -->
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js" integrity="sha384-hIoBPJpTUs74ddyc4bFZSM1TVlQDA60VBbJS0oA934VSz82sBx1X7kSx2ATBDIyd" crossorigin="anonymous"></script>
+
+  <!-- To automatically render math in text elements, include the auto-render extension: -->
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
+      onload="renderMathInElement(document.body);"></script>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide" data-background-image="./gaussian_fig9.gif" data-background-opacity="0.25" data-background-size="cover">
+  <h1 class="title">Stein Variational Gradient Descent</h1>
+  <p class="author">Herbie Wright</p>
+</section>
+
+<section>
+<section id="part-1-variational-inference" class="title-slide slide level1">
+<h1>Part 1: Variational Inference</h1>
+
+</section>
+<section id="bayesian-inference" class="slide level2">
+<h2>Bayesian Inference</h2>
+<ul>
+<li>Consider we are trying to <em>infer</em> some parameter <span class="math inline">\theta \in \mathcal X</span> from some observations/data <span class="math inline">D</span>.</li>
+<li>Assume we have a known likelihood function <span class="math inline">p(D | \theta)</span></li>
+<li>We also want to incorporate <em>prior</em> knowledge to bias our estimate. We express this with a prior distribution <span class="math inline">p(\theta)</span></li>
+<li>In order to infer <span class="math inline">\theta</span>, we want to find the <em>posterior</em> distribution, <span class="math inline">p(\theta | D).</span> By Bayes theorem: <span class="math display"> p(\theta | D) = \frac{p(D | \theta) p(\theta)}{\int_\mathcal{X} p(D | \theta&#39;) p(\theta&#39;) d\theta&#39;} </span></li>
+<li><strong>Problem.</strong> Given <span class="math inline">D</span>, prior, and likelihood, find <span class="math inline">p(\theta | D)</span></li>
+</ul>
+<!-- ## Examples of Bayesian Inference
+
+- *Bayesian Linear Regression*: if $p(D | \theta)$ and $p(\theta)$ are Gaussians, we can analytically solve for $p(\theta | D)$ (also Gaussian)
+- *Beta-Bernoulli Model*: if $p(D | \theta)$ is a Bernoulli distribution and $p(\theta)$ is a beta distribution, then $p(\theta | D)$ has analytic solution (beta distribution)
+- *Bayesian Logistic Regression*: sigmoid likelihood is used and the posterior is approximated with variational techniques
+- *Bayesian Neural Networks*: the posterior distribution over network weights is approximated variationally -->
+</section>
+<section id="variational-inference" class="slide level2">
+<h2>Variational Inference</h2>
+<div class="columns">
+<div class="column" style="width:65%;">
+<ul>
+<li>Bayes Theorem (from prev.): <span class="math display"> p(\theta | D) = \frac{p(D | \theta) p(\theta)}{\int_\mathcal{X} p(D | \theta&#39;) p(\theta&#39;) d\theta&#39;} </span></li>
+<li>In general, the integral in the denominator is intractable.</li>
+<li>We can try to find an approximation to posterior <span class="math inline">p</span> from a parametric class of distributions <span class="math inline">\mathcal Q</span>: <span class="math display"> q^* = \text{arg}\min_{q \in \mathcal Q} \text{dist}(q, p) </span></li>
+</ul>
+</div><div class="column" style="width:35%;">
+<p><img data-src="./variational_inference_out.gif" /></p>
+</div>
+</div>
+</section>
+<section id="kl-divergence" class="slide level2">
+<h2>KL Divergence</h2>
+<ul>
+<li>Variational objective (from prev.): <span class="math inline">q^* = \text{arg}\min_{q \in \mathcal Q} \text{dist}(q, p)</span></li>
+<li><strong>Idea.</strong> Use Kullback-Leibler (KL) divergence to measure “distance”: <span class="math display"> KL(q \| p) = \mathbb E_{x \sim q(x)} \left[\ln \frac{q(x)}{p(x)}\right] = \mathbb E_q \left[\ln q(x) \right] - \mathbb E_q \left[\ln p(x) \right] </span></li>
+<li><strong>Note.</strong> <span class="math inline">KL(q \| p) \neq KL(p \| q)</span></li>
+<li><strong>Note.</strong> If <span class="math inline">\bar{p}(x) = p(x) / Z</span>, then <span class="math display"> KL(q \| p) = \mathbb E_q [\ln q(x)] - \mathbb E_q[\ln \bar{p}(x)] + \ln Z. </span></li>
+<li>New objective: <span class="math display"> q^* = \text{arg}\min_{q \in \mathcal Q} KL(q \| p) </span></li>
+</ul>
+</section>
+<section id="the-algorithm" class="slide level2">
+<h2>The Algorithm</h2>
+<ul>
+<li>We consider approximating <span class="math inline">p</span> with a set of <span class="math inline">m</span> particles <span class="math inline">\{x_i\}_{i \in [n]}</span></li>
+<li><strong>Begin:</strong> Randomly sample initial particles, <span class="math inline">\{x_i^{(0)}\}_{i \in [n]}</span>, then repeat: <!-- - have a kernel function $k$ that measures similarity between particles: $k: \mathcal X \times \mathcal X \rightarrow \mathbb R$ --></li>
+<li><strong>Repeat:</strong> Update each particle with the following rule: <span class="math display"> x_i^{(t+1)} = x_i^{(t)} + \epsilon^{(t)} \hat{\phi}^*(x_i^{(t)}) </span> where <span class="math display"> \hat{\phi}^*(x) = \frac{1}{n} \sum_j \left[k(x_j^{(t)}, x) \nabla \ln p(x_j^{(t)}) + \nabla_{x_j^{(t)}} k(x_j^{(t)}, x)\right] </span></li>
+<li><strong>Claim.</strong> This minimizes KL Divergence <!-- 
+::::
+::: --></li>
+</ul>
+</section>
+<section id="the-theorem" class="slide level2">
+<h2>The Theorem</h2>
+<ul>
+<li><strong>Theorem.</strong> (3.3 from <span class="citation" data-cites="liu2016stein">[1]</span>) Let <span class="math inline">T(x) = x + f(x)</span>, where <span class="math inline">f \in \mathcal H^d</span> and <span class="math inline">q_{[T]}</span> the density of random variable <span class="math inline">z = T(x)</span> when <span class="math inline">x \sim q</span>. Then <span class="math display"> \nabla_f KL (q_{[T]} \| p) \rvert_{f = 0} = - \phi^*_{q, p}</span> where <span class="math inline">\phi^*_{q, p} = \mathbb E_q [k(x, \cdot) \nabla_x \ln p(x) + \nabla_x k(x, \cdot)]</span>.</li>
+</ul>
+</section></section>
+<section>
+<section id="part-2-background" class="title-slide slide level1">
+<h1>Part 2: Background</h1>
+
+</section>
+<section id="rkhs" class="slide level2">
+<h2>RKHS</h2>
+<ul>
+<li><strong>Definition.</strong> Given a p.d. kernel <span class="math inline">k: \mathcal X \times \mathcal X \rightarrow \mathbb R</span>, the corresponding <em>Reproducing Kernel Hilbert Space</em> (RKHS) is defined as <span class="math display"> \mathcal H = \left\{f(\cdot) = \sum_i \alpha_i k(x_i, \cdot) : x_1, x_2, ... \in \mathcal X, \alpha_1, \alpha_2, ... \in \mathbb R \right\} </span> where the inner product is <span class="math inline">\langle f, g \rangle_\mathcal{H} = \sum_{i} \sum_j \alpha_i \beta_i k(x_i, x_j)</span>.</li>
+<li><strong>Reproducing Property:</strong> For any <span class="math inline">f \in \mathcal H</span>, it follows that <span class="math display"> f(x) = \langle k(x, \cdot), f \rangle_{\mathcal H} </span></li>
+<li><em>Examples of Kernels</em>:
+<ul>
+<li>Linear: <span class="math inline">k(x, y) = x^\top y</span></li>
+<li>Gaussian: <span class="math inline">k(x, y) = \exp(-\gamma \| x - y \|^2)</span></li>
+</ul></li>
+</ul>
+</section>
+<section id="functional-gradient-in-rkhs" class="slide level2">
+<h2>Functional Gradient in RKHS</h2>
+<ul>
+<li><strong>Definition.</strong> Let <span class="math inline">F: \mathcal H \rightarrow \mathbb R</span> be a functional over an RKHS <span class="math inline">\mathcal H</span>, the <em>functional gradient</em> is defined as the <span class="math inline">\nabla_f F[f]</span> satisfying <span class="math display"> F[f + \epsilon g] = F[f] + \epsilon \langle \nabla_f F[f], g \rangle_\mathcal{H} + O(\epsilon^2) </span> <!-- - **Example.** Let $F_h[f] = \langle h, f \rangle$, then $\langle  \rangle$ --></li>
+<li><strong>Example.</strong> Let <span class="math inline">E_x [f] = f(x)</span> be the <em>evaluation functional</em> at <span class="math inline">x</span>. Then <span class="math inline">\nabla_f E_x[f] = k(x, \cdot)</span> because we have: <span class="math display"> E_x [f + \epsilon g] = f(x) + \epsilon g(x) = f(x) + \epsilon\langle k(x, \cdot), g\rangle </span></li>
+</ul>
+</section>
+<section id="steins-identity" class="slide level2">
+<h2>Steins Identity</h2>
+<ul>
+<li><strong>Steins Identity:</strong> Let <span class="math inline">p(x)</span> be a smooth density supported on <span class="math inline">\mathcal X \subseteq \mathbb R^d</span> and <span class="math inline">\phi(x) - [\phi_1(x), ..., \phi_d(x)]^\top</span> be a smooth vector function. Then for sufficiently regular <span class="math inline">\phi</span>, <span class="math display"> \mathbb E_p [\mathcal A_p \phi(x)] = 0 </span> where <span class="math display"> \mathcal A_p \phi(x) = \phi(x) \nabla_x \ln p(x)^\top + \nabla_x \phi(x) </span> is the <em>Stein operator</em>.</li>
+<li>Identity can be checked by integration by parts</li>
+</ul>
+</section>
+<section id="stein-discrepancy" class="slide level2">
+<h2>Stein Discrepancy</h2>
+<ul>
+<li><strong>Definition.</strong> The <em>Stein Discrepancy</em> between two distributions <span class="math inline">q, p</span> is defined as <span class="math display"> \mathbb S (q, p) = \max_{\phi \in \mathcal F} \left\{ \left[\mathbb E_q \text{tr} (\mathcal A_p \phi(x))\right]^2 \right\} </span> where <span class="math inline">\mathcal F</span> is some class of functions</li>
+<li>Can think about this as <em>maximum violation</em> of Stein’s identity.</li>
+</ul>
+</section>
+<section id="kernelized-stein-discrepancy" class="slide level2">
+<h2>Kernelized Stein Discrepancy</h2>
+<ul>
+<li>What if we choose <span class="math inline">\mathcal F = \mathcal H^d</span> for RKHS <span class="math inline">\mathcal H</span>?</li>
+<li><strong>Definition.</strong> The <em>Kernelized Stein Discrepancy</em> is defined as <span class="math display"> \mathbb S (q, p) = \max_{\phi \in \mathcal H^d} \left\{ \left[\mathbb E_q \text{tr} (\mathcal A_p \phi(x))\right]^2 : \|\phi\| \leq 1\right\} </span></li>
+<li>This has a solution: <span class="math display"> \phi^*_{q, p}(\cdot) = \mathbb E_q \left[ \mathcal A_p k(x, \cdot) \right] </span> <span class="math display"> \mathbb S(q, p) = \| \phi^*_{q, p} \| </span></li>
+</ul>
+</section>
+<section id="change-of-variables-formula" class="slide level2">
+<h2>Change of Variables Formula</h2>
+<div class="columns">
+<div class="column" style="width:65%;">
+<ul>
+<li>Consider a random variable <span class="math inline">x \sim q(x)</span> and then transforming it to <span class="math inline">z = T(x)</span> with distribution <span class="math inline">q_{[T]}</span></li>
+<li>Then, the following is true: <span class="math display"> q_{[T]}(z) = q(T^{-1} (z)) \cdot | \text{det}(\nabla_z T^{-1}(z)) | </span></li>
+<li>This will be useful during proof of the main theorem</li>
+<li><em>Also</em>: <span class="math inline">KL(q_{[T]} \| p) = KL(q \| p_{[T^{-1}]})</span></li>
+</ul>
+</div><div class="column" style="width:35%;">
+<p><img data-src="./change_of_variables.png" style="width:80.0%" /></p>
+</div>
+</div>
+</section></section>
+<section>
+<section id="part-3-proving-the-theorem" class="title-slide slide level1">
+<h1>Part 3: Proving the Theorem</h1>
+
+</section>
+<section id="theorem" class="slide level2">
+<h2>Theorem</h2>
+<ul>
+<li><p><strong>Theorem.</strong> (3.3 from <span class="citation" data-cites="liu2016stein">[1]</span>) Let <span class="math inline">T(x) = x + f(x)</span>, where <span class="math inline">f \in \mathcal H^d</span> and <span class="math inline">q_{[T]}</span> the density of random variable <span class="math inline">z = T(x)</span> when <span class="math inline">x \sim q</span>. Then <span class="math display"> \nabla_f KL (q_{[T]} \| p) \rvert_{f = 0} = - \phi^*_{q, p} (x)</span> where <span class="math inline">\phi^*_{q, p} (x) = \mathbb E_q [k(x, \cdot) \nabla_x \ln p(x) + \nabla_x k(x, \cdot)]</span>.</p></li>
+<li><p><strong>Recall:</strong> Let <span class="math inline">F[f] = KL(q_{[T]} \| p)</span>, then the functional gradient is the <span class="math inline">\nabla_f F[f]</span> that satisfies <span class="math display"> F[f + \epsilon g] = F[f] + \epsilon \langle \nabla_f F[f], g \rangle_\mathcal{H} + O(\epsilon^2) </span></p></li>
+</ul>
+</section>
+<section id="proof-part-1" class="slide level2">
+<h2>Proof (part 1)</h2>
+<ul>
+<li><strong>Proof.</strong> Let <span class="math display"> F[f] = KL(q_{[x + f(x)]} \| p) = KL(q \| p_{[(x + f(x))^{-1}]}). </span> Then we have <span class="math display"> F[f + \epsilon g] = KL(q \| p_{[(x + f(x) + \epsilon g(x))^{-1}]}) = \mathbb E_q\left[\ln q(x) - \ln p_{[(x + f(x) + \epsilon g(x))^{-1}]}(x) \right]</span> <span class="math display"> = \mathbb E_q\left[\ln q(x) - \ln p(x + f(x) + \epsilon g(x))\right] - \mathbb E_q \left[ \ln \text{det} (I + \nabla_x f(x) + \epsilon \nabla_x g(x)) \right] </span> Which means we have <span class="math display"> F[f + \epsilon g] - F[f] = -\Delta_1 - \Delta_2 </span> <span class="math display"> \Delta_1 = \mathbb E_q [\ln p(x + f(x) + \epsilon g(x))] - \mathbb E_q [\ln p(x + f(x))] </span> <span class="math display"> \Delta_2 = \mathbb E_q [\ln \text{det} (I + \nabla_x f(x) + \epsilon \nabla_x g(x))] - \mathbb E_q [\ln \text{det} (I + \nabla_x f(x))] </span></li>
+</ul>
+</section>
+<section id="proof-part-2" class="slide level2">
+<h2>Proof (part 2)</h2>
+<ul>
+<li>We have: <span class="math display"> \Delta_1 = \mathbb E_q [\ln p(x + f(x) + \epsilon g(x))] - \mathbb E_q [\ln p(x + f(x))] </span> <span class="math display"> = \epsilon \mathbb E_q [\nabla_x \ln p(x + f(x)) \cdot g(x)] + O(\epsilon^2) </span> <span class="math display"> = \epsilon \mathbb E_q [\nabla_x \ln p(x + f(x)) \cdot \langle k(x, \cdot), g \rangle_{\mathcal H^d}] + O(\epsilon^2) </span> <span class="math display"> = \epsilon \langle \mathbb E_q [\nabla_x \ln p(x + f(x)) \cdot  k(x, \cdot) ] , g \rangle_{\mathcal H^d} + O(\epsilon^2) </span></li>
+</ul>
+</section>
+<section id="proof-part-3" class="slide level2">
+<h2>Proof (part 3)</h2>
+<ul>
+<li>Similarly: <span class="math display"> \Delta_2 = \mathbb E_q [\ln \text{det} (I + \nabla_x f(x) + \epsilon \nabla_x g(x))] - E_q [\ln \text{det} (I + \nabla_x f(x))] </span> <span class="math display"> = \epsilon \mathbb E_q \left[(I + \nabla_x f(x))^{-1} \cdot \nabla_x g(x) \right] + O(\epsilon^2) </span> <span class="math display"> = \epsilon \mathbb E_q \left[(I + \nabla_x f(x))^{-1} \cdot \langle\nabla_x k(x, \cdot), g\rangle_{\mathcal H^d}\right] + O(\epsilon^2) </span> <span class="math display"> = \epsilon \big\langle \mathbb E_q \left[ (I + \nabla_x f(x))^{-1} \cdot \nabla_x k(x, \cdot)\right], g\big\rangle_{\mathcal H^d} + O(\epsilon^2) </span></li>
+</ul>
+</section>
+<section id="proof-part-4" class="slide level2">
+<h2>Proof (part 4)</h2>
+<ul>
+<li>We had <span class="math inline">F[f + \epsilon g] - F[f] = - \Delta_1 - \Delta_2</span> with: <span class="math display"> \Delta_1 = \epsilon \langle \mathbb E_q [\nabla_x \ln p(x + f(x)) \cdot  k(x, \cdot) ] , g \rangle_{\mathcal H^d} + O(\epsilon^2) </span> <span class="math display"> \Delta_2 = \epsilon \big\langle \mathbb E_q \left[ (I + \nabla_x f(x))^{-1} \cdot \nabla_x k(x, \cdot)\right], g\big\rangle_{\mathcal H^d} + O(\epsilon^2) </span> Then <span class="math inline">F[f + \epsilon g] = F[f] + \epsilon \langle \nabla_f F[f], g \rangle_\mathcal{H} + O(\epsilon^2)</span> exactly when <span class="math display"> \nabla_f F[f] = - \mathbb E_q \left [ \nabla_x \ln p(x + f(x)) \cdot k(x, \cdot) + (I + \nabla_x f(x))^{-1} \cdot \nabla_x k(x, \cdot) \right] </span></li>
+<li>If we evaluate at <span class="math inline">f(x) = 0</span>, we get: <span class="math display"> \nabla_f F[f] \rvert_{f = 0}  = - \mathbb E_q \left[ \nabla_x \ln p(x) \cdot k(x, \cdot) + \nabla_x k(x, \cdot) \right].  </span> Thus, our result. <span class="math inline">\square</span></li>
+</ul>
+</section></section>
+<section>
+<section id="part-4-understanding-svgd" class="title-slide slide level1">
+<h1>Part 4: Understanding SVGD</h1>
+
+</section>
+<section id="from-the-theorem-to-the-method" class="slide level2">
+<h2>From the Theorem to the Method</h2>
+<ul>
+<li><strong>Theorem.</strong> Let <span class="math inline">T(x) = x + f(x)</span>, R.V. <span class="math inline">z = T(x)</span> for <span class="math inline">x \sim q</span>. Then <span class="math display"> \nabla_f KL (q_{[T]} \| p) \rvert_{f = 0} = - \phi^*_{q, p} (x)</span> where <span class="math inline">\phi^*_{q, p} (x) = \mathbb E_q [k(x, \cdot) \nabla_x \ln p(x) + \nabla_x k(x, \cdot)]</span>.</li>
+<li><strong>The Method:</strong>
+<ol type="1">
+<li>Sample initial “particles”, <span class="math inline">\{x_i^{(0)}\}_{i \in [n]}</span> from initial distribution <span class="math inline">q_0</span></li>
+<li>Repeatedly transform our particles so that <span class="math inline">q_t \rightarrow p</span>: <span class="math display"> \hat{\phi}^*(x) = \frac{1}{n} \sum_j \left[k(x_j^{(t)}, x) \nabla \ln p(x_j^{(t)}) + \nabla_{x_j^{(t)}} k(x_j^{(t)}, x)\right] </span> <span class="math display"> x_i^{(t+1)} = x_i^{(t)} + \epsilon^{(t)} \hat{\phi}^*(x_i^{(t)}) </span></li>
+</ol></li>
+</ul>
+</section>
+<section id="interpretation-of-update-equation" class="slide level2">
+<h2>Interpretation of Update Equation</h2>
+<ul>
+<li>We have the following update equation: <span class="math display"> \hat{\phi}^*(x) = \frac{1}{n} \sum_j \left[k(x_j^{(t)}, x) \nabla \ln p(x_j^{(t)}) + \nabla_{x_j^{(t)}} k(x_j^{(t)}, x)\right] </span> <span class="math display"> x_i^{(t+1)} = x_i^{(t)} + \epsilon^{(t)} \hat{\phi}^*(x_i^{(t)}) </span></li>
+<li>We can interpret the term <span class="math inline">k(x_j^{(t)}, x) \nabla \ln p(x_j^{(t)})</span> as a particle trying to <em>climb</em> to high probability areas</li>
+<li>We can interpret the term <span class="math inline">\nabla_{x_j^{(t)}} k(x_j^{(t)}, x)</span> as a <em>repulsive force</em> trying to push particles away from each other</li>
+<li><strong>Note.</strong> We can apply this to general optimization problems of the form <span class="math inline">\min_x f(x)</span> by defining <span class="math inline">p(x) \propto \exp(-f(x))</span>.</li>
+</ul>
+</section>
+<section id="practical-considerations" class="slide level2">
+<h2>Practical Considerations</h2>
+<ul>
+<li>The original paper <span class="citation" data-cites="liu2016stein">[1]</span> made a couple decisions when implementing SVGD:
+<ul>
+<li>Used a Gaussian kernel with a scaling term that depended on median of distances between particles (changes as algorithm is run)</li>
+<li>Used AdaGrad <span class="citation" data-cites="duchi2011adaptive">[2]</span> method for adaptive step sizes (step size gets smaller over time)</li>
+<li>Initialized particles with the prior distribution</li>
+</ul></li>
+</ul>
+</section>
+<section id="svgd-example-1" class="slide level2">
+<h2>SVGD Example 1</h2>
+<p><img data-src="./gaussian_fig8.gif" /></p>
+</section>
+<section id="svgd-getting-stuck" class="slide level2">
+<h2>SVGD Getting Stuck</h2>
+<p><img data-src="./gaussian_fig10.gif" /></p>
+</section>
+<section id="svgd-not-getting-stuck" class="slide level2">
+<h2>SVGD Not Getting Stuck</h2>
+<p><img data-src="./gaussian_fig11.gif" /></p>
+</section>
+<section id="results-from-liu2016stein-particle-efficiency" class="slide level2">
+<h2>Results from <span class="citation" data-cites="liu2016stein">[1]</span> (Particle Efficiency)</h2>
+<p><img data-src="./paperfig_sample_eff_vs_mc.png" /></p>
+<p><img data-src="./paperfig_bayesian_logistic_regression.png" /></p>
+</section>
+<section id="results-from-liu2016stein-bayesian-neural-network" class="slide level2">
+<h2>Results from <span class="citation" data-cites="liu2016stein">[1]</span> (Bayesian Neural Network)</h2>
+<p><img data-src="./paperfigtableforbnn.png" /></p>
+</section></section>
+<section>
+<section id="part-5-analysis-extensions-and-applications" class="title-slide slide level1">
+<h1>Part 5: Analysis, Extensions, and Applications</h1>
+
+</section>
+<section id="theoretical-analysis" class="slide level2">
+<h2>Theoretical Analysis</h2>
+<ul>
+<li>“Stein Variational Gradient Descent as Gradient Flow” <span class="citation" data-cites="liu2017stein">[3]</span></li>
+<li>“Convergence of Stein variational gradient descent under a weaker smoothness condition” <span class="citation" data-cites="sun2023convergence">[4]</span> <span class="math display"> t(\epsilon) \in O\left( \frac{1}{\epsilon} \right) </span></li>
+<li>“A finite-particle convergence rate for stein variational gradient descent” <span class="citation" data-cites="shi2024finite">[5]</span> <span class="math display"> \text{KSD}(n) \in O\left(\frac{1}{\sqrt{\log \log n}}\right) </span></li>
+<li>And others</li>
+</ul>
+</section>
+<section id="nd-order-svgd" class="slide level2">
+<h2>2nd Order SVGD</h2>
+<div class="columns">
+<div class="column" style="width:55%;">
+<ul>
+<li>“A Stein variational Newton method” <span class="citation" data-cites="detommaso2018stein">[6]</span></li>
+<li>“Projected Stein variational Newton: A fast and scalable Bayesian inference method in high dimensions” <span class="citation" data-cites="chen2019projected">[7]</span></li>
+</ul>
+</div><div class="column" style="width:45%;">
+<p><img data-src="./svgd_newtons.png" /> (from <span class="citation" data-cites="detommaso2018stein">[6]</span>)</p>
+</div>
+</div>
+</section>
+<section id="dealing-with-constraints" class="slide level2">
+<h2>Dealing with Constraints</h2>
+<ul>
+<li>“Sampling in constrained domains with orthogonal-space variational gradient descent” <span class="citation" data-cites="zhang2022sampling">[8]</span> can deal with a single equality constraint</li>
+<li>“Constrained stein variational trajectory optimization” <span class="citation" data-cites="power2023constrained">[9]</span> can deal with equality and inequality constraints</li>
+</ul>
+<p><img data-src="./steinwithconstraints.png" /> (from <span class="citation" data-cites="power2023constrained">[9]</span>)</p>
+</section>
+<section id="sgvd-for-state-estimation" class="slide level2">
+<h2>SGVD For State Estimation</h2>
+<div class="columns">
+<div class="column" data-widht="60%">
+<p>“Stein particle filter for nonlinear, non-Gaussian state estimation” <span class="citation" data-cites="maken2022stein">[10]</span></p>
+<ul>
+<li>Figure from paper is on the right:</li>
+<li>Uses SGVD instead of traditional particle filter for state estimation</li>
+</ul>
+</div><div class="column" style="width:40%;">
+<p><img data-src="./stein_state_est.png" /></p>
+</div>
+</div>
+</section>
+<section id="stein-variational-model-predictive-control-lambert2021stein" class="slide level2">
+<h2>Stein Variational Model Predictive Control <span class="citation" data-cites="lambert2021stein">[11]</span></h2>
+<p><img data-src="./outmpc.gif" /></p>
+<!-- TODO: THIS -->
+<!-- ## Application 3 -->
+<!-- TODO: THIS -->
+</section>
+<section id="references" class="slide level2 unnumbered">
+<h2 class="unnumbered">References</h2>
+<div id="refs" class="references" role="doc-bibliography">
+<div id="ref-liu2016stein">
+<p>[1] Q. Liu and D. Wang, “Stein variational gradient descent: A general purpose bayesian inference algorithm,” <em>Advances in neural information processing systems</em>, vol. 29, 2016.</p>
+</div>
+<div id="ref-duchi2011adaptive">
+<p>[2] J. Duchi, E. Hazan, and Y. Singer, “Adaptive subgradient methods for online learning and stochastic optimization.” <em>Journal of machine learning research</em>, vol. 12, no. 7, 2011.</p>
+</div>
+<div id="ref-liu2017stein">
+<p>[3] Q. Liu, “Stein variational gradient descent as gradient flow,” <em>Advances in neural information processing systems</em>, vol. 30, 2017.</p>
+</div>
+<div id="ref-sun2023convergence">
+<p>[4] L. Sun, A. Karagulyan, and P. Richtarik, “Convergence of stein variational gradient descent under a weaker smoothness condition,” in <em>International conference on artificial intelligence and statistics</em>, 2023, pp. 3693–3717.</p>
+</div>
+<div id="ref-shi2024finite">
+<p>[5] J. Shi and L. Mackey, “A finite-particle convergence rate for stein variational gradient descent,” <em>Advances in Neural Information Processing Systems</em>, vol. 36, 2024.</p>
+</div>
+<div id="ref-detommaso2018stein">
+<p>[6] G. Detommaso, T. Cui, Y. Marzouk, A. Spantini, and R. Scheichl, “A stein variational newton method,” <em>Advances in Neural Information Processing Systems</em>, vol. 31, 2018.</p>
+</div>
+<div id="ref-chen2019projected">
+<p>[7] P. Chen, K. Wu, J. Chen, T. O’Leary-Roseberry, and O. Ghattas, “Projected stein variational newton: A fast and scalable bayesian inference method in high dimensions,” <em>Advances in Neural Information Processing Systems</em>, vol. 32, 2019.</p>
+</div>
+<div id="ref-zhang2022sampling">
+<p>[8] R. Zhang, Q. Liu, and X. Tong, “Sampling in constrained domains with orthogonal-space variational gradient descent,” <em>Advances in Neural Information Processing Systems</em>, vol. 35, pp. 37108–37120, 2022.</p>
+</div>
+<div id="ref-power2023constrained">
+<p>[9] T. Power and D. Berenson, “Constrained stein variational trajectory optimization,” <em>arXiv preprint arXiv:2308.12110</em>, 2023.</p>
+</div>
+<div id="ref-maken2022stein">
+<p>[10] F. A. Maken, F. Ramos, and L. Ott, “Stein particle filter for nonlinear, non-gaussian state estimation,” <em>IEEE Robotics and Automation Letters</em>, vol. 7, no. 2, pp. 5421–5428, 2022.</p>
+</div>
+<div id="ref-lambert2021stein">
+<p>[11] A. Lambert, F. Ramos, B. Boots, D. Fox, and A. Fishman, “Stein variational model predictive control,” in <em>Conference on robot learning</em>, 2021, pp. 1278–1297.</p>
+</div>
+</div>
+</section></section>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.9.2/js/reveal.js"></script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+        // Display the page number of the current slide
+        slideNumber: "c/t",
+        // Push each slide change to the browser history
+        history: true,
+
+        // Optional reveal.js plugins
+        dependencies: [
+          { src: 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.9.2/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.9.2/plugin/zoom-js/zoom.js', async: true },
+          { src: 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.9.2/plugin/notes/notes.js', async: true }
+        ]
+      });
+    </script>
+    </body>
+</html>
