@@ -35,6 +35,8 @@
           flex-direction: column;
           align-items: center;
           padding-bottom: 5rem;
+          padding-left: 0.5rem;
+          padding-right: 0.5rem;
       }
 
       header > p {
@@ -44,7 +46,7 @@
 
       body > * {
           margin-bottom: 0;
-          width: min(100vw, 800px);
+          width: min(calc(100vw - 1rem), 800px);
       }
 
       h1 {
@@ -65,6 +67,7 @@
 
       img {
           max-height: 250px;
+          max-width: min(calc(100vw - 1rem), 600px);
       }
 
       .math {
