@@ -6,408 +6,408 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
   <title>Herbie’s Update Write-up</title>
   <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
     code{white-space: pre-wrap;}
     span.smallcaps{font-variant: small-caps;}
-    span.underline{text-decoration: underline;}
-    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
     div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
-    ul.task-list{list-style: none;}
-  </style>
-  <script src="/usr/share/javascript/katex/katex.min.js"></script>
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for citations */
+    div.csl-bib-body { }
+    div.csl-entry {
+      clear: both;
+      margin-bottom: 0em;
+    }
+    .hanging-indent div.csl-entry {
+      margin-left:2em;
+      text-indent:-2em;
+    }
+    div.csl-left-margin {
+      min-width:2em;
+      float:left;
+    }
+    div.csl-right-inline {
+      margin-left:2em;
+      padding-left:1em;
+    }
+    div.csl-indent {
+      margin-left: 2em;
+    }  </style>
+  <link rel="stylesheet" href="styles.css" />
+  <script defer=""
+  src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
   <script>document.addEventListener("DOMContentLoaded", function () {
-   var mathElements = document.getElementsByClassName("math");
-   for (var i = 0; i < mathElements.length; i++) {
-    var texText = mathElements[i].firstChild;
-    if (mathElements[i].tagName == "SPAN") {
-     katex.render(texText.data, mathElements[i], {
-      displayMode: mathElements[i].classList.contains('display'),
-      throwOnError: false,
-      fleqn: false
-     });
-  }}});
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
   </script>
-  <link rel="stylesheet" href="/usr/share/javascript/katex/katex.min.css" />
-  <style>
-      body {
-          font-family: sans-serif;
-          line-height: 1.65;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          padding-bottom: 5rem;
-          padding-left: 0.5rem;
-          padding-right: 0.5rem;
-      }
-
-      header > p {
-          font-style: italic;
-      }
-
-
-      body > * {
-          margin-bottom: 0;
-          width: min(calc(100vw - 1rem), 800px);
-      }
-
-      h1 {
-          margin-top: 2.5rem;
-      }
-
-      h2 {
-          margin-top: 2rem;
-      }
-
-      h3 {
-          margin-top: 1.5rem;
-      }
-
-      p, ol, ul {
-          margin-top: 1rem;
-      }
-
-      img {
-          max-height: 250px;
-          max-width: min(calc(100vw - 1rem), 600px);
-      }
-
-      .math {
-          font-family: serif;
-          
-      }
-      
-      .display {
-          width: 100%;
-          text-align: center;
-          display: inline-block;
-      }
-
-      p:has(> .display) {
-          line-height: 0.5;
-      }
-
-      p .katex-display {
-          margin: 0;
-      }
-
-      li > ul, li > ol {
-          margin-top: 0;
-          margin-bottom: 0.25rem;
-      }
-
-      table {
-          width: auto;
-          border-collapse: collapse;
-          margin-top: 1rem;
-      }
-
-      td, th {
-          border: 1px solid black;
-          padding: 0 0.25rem;
-      }
-
-      /* br {
-          line-height: 0;
-      } */
-  /*     
-      
-      
-      img {
-          border: none !important;
-          margin: 0px !important;
-      }
-      
-      h2 {
-          font-size: 3rem !important;
-      }
-      
-      p, li {
-          font-size: 1.7rem;
-          margin-bottom: 0.5rem;
-          margin-top: 0.5rem;
-      }
-      
-      div.sourceCode {
-          margin: 0.5rem 0;
-      }
-      
-      .katex-display {
-          margin: 1.25rem 0 !important;
-      }
-      
-      .references p {
-          font-size: 1.0rem;
-          text-align: left;
-          margin: 0.25rem
-      }
-      
-      #title-slide .title {
-          border: 6px solid black;
-          border-right: none;
-          border-top: none;
-          border-bottom: none;
-          padding: 16px 0px
-      }
-      
-      td {
-          width: 50% !important;
-      } */
-
-      /* 
-      #title-slide * {
-          color: white !important;
-      } */
-      
-      </style>
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.css" integrity="sha384-wcIxkf4k558AjM3Yz3BBFQUbk/zgIYC2R0QpeeYb+TwlBVMrlgLqwRjRtGZiK7ww" crossorigin="anonymous">
-      
-      <!-- The loading of KaTeX is deferred to speed up page rendering -->
-      <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/katex.min.js" integrity="sha384-hIoBPJpTUs74ddyc4bFZSM1TVlQDA60VBbJS0oA934VSz82sBx1X7kSx2ATBDIyd" crossorigin="anonymous"></script>
-      
-      <!-- To automatically render math in text elements, include the auto-render extension: -->
-      <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"
-          onload="renderMathInElement(document.body);"></script>
+  <link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css" />
 </head>
 <body>
 <header id="title-block-header">
 <h1 class="title">Herbie’s Update Write-up</h1>
-<p class="date">2024 July 19</p>
-<p><a href="/presentations/update_temp/writeup.pdf">PDF</a> (gifs don't work and images are weird)</p>
+<p class="date">2024 July 26</p>
 </header>
+<ul>
+<li><a href="#introduction">Introduction</a></li>
+<li><a href="#thinking-about-the-pitch">Thinking about the
+Pitch</a></li>
+<li><a href="#new-test-suite">New Test Suite</a></li>
+<li><a href="#gradient-computation">Gradient Computation</a></li>
+<li><a href="#looking-forward">Looking Forward</a></li>
+<li><a href="#references">References</a></li>
+</ul>
 <h2 id="introduction">Introduction</h2>
-<p>I had four action items from last time:</p>
-<ol type="1">
-<li>Update loss function to penalize nonzero velocities and accelerations at final state</li>
-<li>Update the fake data to be better</li>
-<li>Try out the Laplacian kernel</li>
-<li>Come up with a “pitch” for what the paper might be</li>
-</ol>
-<p>This write-up is organized into the following sections:</p>
+<p>I got the following feedback from last time:</p>
 <ul>
-<li><strong><a href="#introduction">Introduction</a></strong> section that provides a brief introduction</li>
-<li><strong><a href="#paper-pitch">Paper “Pitch”</a></strong> provides a brief sketch of the argument a final paper might make</li>
-<li><strong><a href="#minor-changes">Minor Changes</a></strong> provides some figures for updates corresponding to action items 1-3</li>
-<li><strong><a href="#exploring-gradients">Exploring Gradients</a></strong> examines the gradients from differentiable physics that I am using</li>
-<li><strong><a href="#thinking-about-a-loss">Thinking About a Loss</a></strong> provides some thoughts I have concerning what loss function should be used during the method</li>
-<li><strong><a href="#final-questions">Final Questions</a></strong> is kind of a conclusion and has four questions I might need help on</li>
+<li>For the pitch: connecting to downstream task, demonstrate better
+reconstructions, and couple with V-PRISM</li>
+<li>Create a test suite of 5-10 examples</li>
+<li>Then, explore gradient computation</li>
 </ul>
-<h2 id="paper-pitch">Paper “Pitch”</h2>
-<h3 id="motivation">Motivation</h3>
+<h2 id="thinking-about-the-pitch">Thinking about the Pitch</h2>
+<p>Previously, the pitch was something like:</p>
 <ul>
-<li>Detailed, accurate 3D reconstructions allow robots to better reason about 3D geometry, which is useful for many manipulation tasks</li>
-<li>Most state-of-the-art reconstruction methods are not physically accurate/stable. Thus:
+<li>Detailed, accurate 3D reconstructions allow robots to better reason
+about 3D geometry, which is useful for many manipulation tasks</li>
+<li>Most SoTA methods are not physically accurate/stable, so there is
+room for improvement.
 <ul>
-<li>There is room for improvement of the 3D models using physical information</li>
-<li>Model-base planning through physics simulators is not accurate with most SoTA methods (such planning algorithms were a main point in ARM <span class="citation" data-cites="agnew2021amodal">[1]</span>)</li>
+<li>Methods that do are either non-differentiable <span class="citation"
+data-cites="song2018inferring">[1]</span> or use heuristic loss terms
+<span class="citation" data-cites="agnew2021amodal">[2]</span></li>
 </ul></li>
-<li>Here is an example of V-PRISM being put in simulation:
+<li>We will create a loss term that penalizes physical stability of a
+scene that can be used in two ways:
 <ul>
-<li><img src="./out_drake.gif" /></li>
+<li>During training similar to <span class="citation"
+data-cites="agnew2021amodal">[2]</span></li>
+<li>During optimization-based reconstruction like in <span
+class="citation" data-cites="park2019deepsdf wright2024v">[3],
+[4]</span></li>
 </ul></li>
-<li>Certain methods do reason about physics but are either non-differentiable (IPR <span class="citation" data-cites="song2018inferring">[2]</span>) or use heuristic loss terms that do not directly ensure stability (ARM <span class="citation" data-cites="agnew2021amodal">[1]</span>)</li>
-</ul>
-<h3 id="the-idea">The Idea</h3>
+<li>Ideally, we would like our method to improve:
 <ul>
-<li>Make use of differentiable contact models and simulation</li>
-<li>Construct a (differentiable) loss function that penalizes unstable scenes, maybe something like (see <a href="#thinking-about-a-loss">Thinking About a Loss</a> for more info on specifics): <span class="math display"> L_{\text{stable}} = \int_0^T  \alpha^{t} \| s_t - s_0 \|^2 dt </span></li>
-<li>This can then be used in (1) optimization-based reconstruction methods or (2) training a inference model to predict more stable configurations (similar to <span class="citation" data-cites="agnew2021amodal">[1]</span>)
-<ul>
-<li><em>Note:</em> Will need a differentiable way to transform shape into pointcloud (As discussed, I am using the method from <span class="citation" data-cites="remelli2020meshsdf">[3]</span> right now for implicit function iso surface extraction)</li>
-</ul></li>
-<li>Ideally, this makes our reconstructions better overall and for planning</li>
-<li>In practice we can combine this with a Hilbert Map Representation or DeepSDF-like <span class="citation" data-cites="park2019deepsdf">[4]</span> approach for optimization-based reconstruction
-<ul>
-<li>We could use stein to make this probabilistic</li>
-<li>Or we could train a PointSDF-like <span class="citation" data-cites="van2020learning">[5]</span> model, with it as a regularization term during training.</li>
+<li>Shape completion/reconstruction accuracy</li>
+<li>Downstream task success</li>
 </ul></li>
 </ul>
-<p><strong>Experiment Ideas:</strong> These are some ideas for what potential experiments we could run to try to validate our method:</p>
+<p>Thinking about what downstream tasks we could show success with, we
+could do a similar sort of thing to <span class="citation"
+data-cites="agnew2021amodal">[2]</span>:</p>
 <ul>
-<li>Compare reconstructions (IoU and/or Chamfer) with alternative method that incorporates physics (ARM <span class="citation" data-cites="agnew2021amodal">[1]</span>, IPR <span class="citation" data-cites="song2018inferring">[2]</span>)</li>
-<li>Compare reconstructions (IoU and/or Chamfer) of method without physics (V-PRISM <span class="citation" data-cites="wright2024v">[6]</span>) with utilizing physics
+<li>Different robotic tasks (grasping, pushing, and pulling) and did the
+following:
 <ul>
-<li>Maybe compare PointSDF with using loss as regularization during training of PointSDF-like model</li>
+<li>First reconstruct the scene</li>
+<li>Then plan a trajectory with the 3d reconstruction for the task</li>
+<li>Finally the trajectory is executed with the original object (all in
+sim).</li>
 </ul></li>
-<li>Qualitative comparisons as well?</li>
-<li>Compare movement in simulation between other method and physics-informed similar to <span class="citation" data-cites="agnew2021amodal">[1]</span></li>
-<li>Maybe compare performance on some downstream task again similar to <span class="citation" data-cites="agnew2021amodal">[1]</span></li>
-<li>Maybe compare to something like GenRe <span class="citation" data-cites="zhang2018learning">[7]</span></li>
-</ul>
-<h3 id="other">Other</h3>
-<p>There are also other things that might fit into the pitch:</p>
+<li>They released this benchmark I think, so it would be possible to
+reproduce it
 <ul>
-<li><em>Probabilistic reconstruction (SVGD)</em> - Object reconstruction is ill-posed, maybe it more theoretically grounded to model reconstructions through a distribution of shapes</li>
-<li>Do we want this to focus on Hilbert Maps?</li>
+<li>They didn’t release their NN model weights though, so it will need
+to be retrained for direct comparison.</li>
+</ul></li>
 </ul>
-<h2 id="minor-changes">Minor Changes</h2>
-<p>I implemented the changes recommended in the action items, which are detailed in subsequent subsections. I also spent a little bit of time trying to find better hyperparameters for simulation based on some hacky heuristics I through together, which would explain why the simulations may be exibhiting different behavior than previously.</p>
-<h3 id="new-fake-data">New Fake Data</h3>
-<p>I updated my fake 2D data, now it randomly generates 2D data that looks roughly like this:</p>
+<h2 id="new-test-suite">New Test Suite</h2>
+<p>Some concerns were brought up about overfitting to the square
+example:</p>
 <p><img src="./fake_2d_data.png" /></p>
-<p>Where <span style="color: blue">blue</span> are negative points and <span style="color: orange">orange</span> are positive (surface) points. There are now more points involved.</p>
-<h3 id="laplacian-kernel">Laplacian Kernel</h3>
-<p>I implemented the Laplacian kernel (it was a pretty small change), it tends to make surfaces a little more noisy. Here is an example of reconstructions after running SVGD with a Hilbert Map loss:</p>
-<p><img src="./svgd_recon_before.png" /></p>
-<p>I then tried to optimize for physics and the ln posterior actually got worse after the optimization; this may be symptomatic of the gradient problem discussed in <a href="#exploring-gradients">Exploring Gradients</a>. Here is the before/after physics gifs</p>
-<p><strong>Before:</strong></p>
-<p><img src="./physics_before_laplacian.gif" /></p>
-<p><strong>After:</strong></p>
-<p><img src="./physics_after_laplacian.gif" /></p>
-<p>The reconstructions are pretty similar because I used a low learning rate, but this was to demonstrate that even with a low learning rate, the ln posterior doesn’t improve (the numbers below the images are the ln posterior values for the 4 different particles).</p>
-<p>The hyperparameters for those images:</p>
-<table>
-<thead>
-<tr class="header">
-<th>Hyperparam</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>kernel</td>
-<td>Laplacian</td>
-</tr>
-<tr class="even">
-<td>optimizer</td>
-<td>Adam</td>
-</tr>
-<tr class="odd">
-<td>num opt steps</td>
-<td>300</td>
-</tr>
-<tr class="even">
-<td>num physics steps</td>
-<td>300</td>
-</tr>
-</tbody>
-</table>
-<p>Increasing the learning rate along with some other params can cause total failure:</p>
-<p><img src="./physics_after_fail.gif" /></p>
-<h3 id="penalizing-velocity-and-acceleration-in-final-state">Penalizing Velocity and Acceleration in Final State</h3>
-<p>Even though I think it might not be as necessary because there is less rolling with my new physics parameter, I updated the loss I was using to include the velocity and acceleration at the final state. The following is an example of that. This is the reconstruction going into the physics based optimization:</p>
-<p><img src="./svgd_recon_before2.png" /></p>
-<p>Here are the before/after of physics:</p>
-<p><strong>Before:</strong></p>
-<p><img src="./physics_before.gif" /></p>
-<p><strong>After:</strong></p>
-<p><img src="./physics_after.gif" /></p>
-<p>Again, stuff doesn’t go down like I’d hope, which brings me to try <a href="#exploring-gradients">Exploring Gradients</a> and <a href="#thinking-about-a-loss">Thinking About a Loss</a>.</p>
-<p>Here were the hyperparameters for the above gifs:</p>
-<table>
-<thead>
-<tr class="header">
-<th>Hyperparam</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>kernel</td>
-<td>Gaussian</td>
-</tr>
-<tr class="even">
-<td>optimizer</td>
-<td>Adam</td>
-</tr>
-<tr class="odd">
-<td>num opt steps</td>
-<td>300</td>
-</tr>
-<tr class="even">
-<td>num physics steps</td>
-<td>300</td>
-</tr>
-</tbody>
-</table>
-<h2 id="exploring-gradients">Exploring Gradients</h2>
-<p>I noticed some papers pointing to problems with gradients from differentiable simulation with contact <span class="citation" data-cites="metz2021gradients zhong2023improving zhong2022differentiable">[8]–[10]</span>. I also observed that optimization I currently had using such gradients was not well-behaved and would sometimes increase loss even at low learning rates. Thus, I decided to investigate if there could be a problem here.</p>
-<h3 id="gradients-from-dynamic-systems-and-eigenvalues-of-its-jacobian">Gradients From Dynamic Systems and Eigenvalues of Its Jacobian</h3>
-<p>The following math comes from <span class="citation" data-cites="metz2021gradients">[8]</span>. Consider a dynamics function conditioned on parameters <span class="math inline">w</span> that takes the following form:</p>
-<p><span class="math display"> s_{t+1} = f(s_t; w) </span></p>
-<p>Then consider we have some loss function with respect to the system:</p>
-<p><span class="math display"> L({w}) = \frac{1}{T}\sum_{t=0}^T l_t (s_t; w) </span></p>
-<p>Following <span class="citation" data-cites="metz2021gradients">[8]</span>, we can express the following derivative (used in gradient descent of <span class="math inline">L</span>):</p>
-<p><span class="math display"> \frac{dL}{d w} = \frac{1}{T} \sum_{t=0}^T \left[\frac{\partial l_t}{\partial w} + \sum_{k=1}^{t} \frac{\partial l_t}{\partial s_t} \left( \prod_{i=k}^t \frac{\partial s_i}{\partial s_{i-1}} \right) \frac{\partial s_{k}}{\partial w}\right] </span></p>
-<p>Thus, the convergence and whether or not gradients explode is dependent on the eigenvalues of <span class="math inline">\frac{\partial s_i}{\partial s_{i-1}}</span>, which is the Jacobian of <span class="math inline">f</span> above. Thus our system can be poorly behaved and chaotic if these eigenvalues are high magnitude.</p>
-<h3 id="experiments">Experiments</h3>
-<p><strong>Simple Square:</strong> First I analyze the gradients of the dynamics of the following square (slow-mo gif)</p>
-<p><img src="./out_for_eig.gif" /></p>
-<p>As you can see, the square is not far from the ground and is at a slight angle. It simply falls a little and becomes flat. The physics are a spring-damper setup. Here is a graph of the max/min eigenvalues of the Jacobian <span class="math inline">d s_t / d s_0</span>:</p>
-<p><img src="./jacobian_eigenvalues_square.png" /></p>
-<p>As shown in the graphs, once contact was made at about time step 50, the max/min eigenvalues start to do not-so-good things.</p>
-<p><strong>Reconstruction Example:</strong> Next, I looked at the reconstruction stuff we have been doing; Here is what the physics look like for that:</p>
+<p>As such, it would be a good idea to come up with a few different
+examples that could be used to prevent overfitting. I was thinking we
+could have the following examples</p>
+<ul>
+<li>2D square (above)</li>
+<li>2D circle</li>
+<li>2D tall hourglass</li>
+<li>3D cube</li>
+<li>3D mesh of something (like mustard bottle)</li>
+<li>3D real-world object</li>
+</ul>
+<p>I need to add some updates to my code for the 3D stuff to handle
+rotations, etc. correctly.</p>
+<h2 id="gradient-computation">Gradient Computation</h2>
+<p>Last time, I brought up some concerns about gradients. I based my
+investigation loosely off of <span class="citation"
+data-cites="metz2021gradients">[5]</span>. I found that there was
+evidence of exploding gradients:</p>
 <div class="columns">
 <div class="column">
 <p><img src="./jac_physics_recon.gif" /></p>
 </div><div class="column">
-<p><img src="./recon_jacobian_stuff.png" /></p>
-</div>
-</div>
-<p>Nothing to write home about: it just kind of rolls over. However, when you analyze the gradients, you see gradient explosion. This first graph again shows the min/max eigenvalues of the Jacobian <span class="math inline">d s_t / d s_0</span> (<em>Note:</em> this is jacobian over <span class="math inline">t</span> steps):</p>
-<p><img src="./jacobian_eigenvalues_recon.png" /></p>
-<p>It should be noted that these images are on the scale of <span class="math inline">10^7</span> and <span class="math inline">10^6</span> respectively. Also note that the min eigenvalue takes high magnitude negative values; it is exploding!</p>
-<p>Next is a graph of the norm (frobenius I think) of the Jacobian <span class="math inline">\frac{d s_t}{d w}</span> (the full derivate not partial). It clearly is exploding and clipped, reaching norms above <span class="math inline">10^{12}</span>:</p>
 <p><img src="./jacobian_norms_recon.png" /></p>
-<h3 id="what-can-we-do-about-this">What Can We Do About This?</h3>
-<p>As per this section, it seems we have an exploding gradient problem. There are a few things we can do about this. Here are some ideas:</p>
+</div>
+</div>
+<p>Specifically, I was looking at the Jacobian of the dynamics <span
+class="math inline">\partial s_t / \partial s_0</span> (The above image
+is the norm of the Jacobian <span class="math inline">\partial s_t /
+\partial w</span>). The explosion is likely due to the spectral
+properties of the Jacobian of the dynamics function being iterated.</p>
+<p>In <span class="citation" data-cites="metz2021gradients">[5]</span>,
+there were a few suggestions for dealing with this:</p>
 <ul>
-<li>Change parameters of dynamics (maybe parameters like stiffness, damping, etc could be tuned for better gradients)</li>
-<li>Change the loss function (refer to <a href="#thinking-about-a-loss">Thinking About a Loss</a>)</li>
-<li>Be thoughtful about scale and gradient clipping during optimization.</li>
+<li><strong>Smoothing:</strong> “Contact ‘softening’ has proven
+particularly fruitful.”</li>
+<li><strong>Black-Box Gradients:</strong> “Sometimes, black box gradient
+estimates can result in lower variance gradient estimates”</li>
 </ul>
-<p>Also, it might be worth exploring how noisy local gradients are (perhaps smoothing as hinted in <span class="citation" data-cites="metz2021gradients">[8]</span> and explored in <span class="citation" data-cites="pang2023global">[11]</span> may help alleviate problems)</p>
-<h2 id="thinking-about-a-loss">Thinking About a Loss</h2>
-<p>One idea I had for minimizing gradients, was to have a little bit of the loss function at each step of the way, with an exponentially decreasing weight assigned to it. It would be the discrete analogue to something like (for decay factor <span class="math inline">0 &lt; \alpha &lt; 1</span>):</p>
-<p><span class="math display"> L_{\text{stable}} = \int_0^T  \alpha^{t} \| s_t - s_0 \|^2 dt </span></p>
-<p>And if we descretize things would look like:</p>
-<p><span class="math display"> L_{\text{stable}} = \sum_{t=1}^T \alpha^t \|s_t - s_0 \|^2 dt</span></p>
-<p>Where <span class="math inline">dt</span> is the time step and <span class="math inline">\|\cdot\|</span> represents the geodesic norm in <span class="math inline">SE(3)</span> or whatever space we are in. Penalizing the whole trajectory like this would allow gradients from later steps subject to explosion to be counter-balanced in a way by the decaying factor.</p>
-<h2 id="final-questions">Final Questions</h2>
-<p>Basically, the main problems I am facing are:</p>
-<ol type="1">
-<li>Differentiable physics with contacts is chaotic and over any significant time horizon often results in gradient explosion</li>
-<li>I think the paper “pitch” still needs to be ironed out</li>
-</ol>
-<p>Then, my questions are the following:</p>
-<ol type="1">
-<li>What would help strengthen the paper idea (i.e. what should be stressed, added, or taken out)?</li>
-<li>How should I combat the exploding gradients as per <a href="#exploring-gradients">Exploring Gradients</a>?</li>
-<li>Does my new loss function make sense?</li>
-<li>What should I focus on for the next bit?</li>
-</ol>
+<p>I also had the idea that perhaps an exponentially decaying loss
+function would help with this problem. Then, the loss would be something
+like:</p>
+<p><span class="math display"> L_\text{stable} = \frac{1}{T}\sum_{t=1}^T
+\frac{\alpha^t}{2} \|s_t - s_0 \|^2 </span></p>
+<p>for <span class="math inline">0 &lt; \alpha &lt; 1</span>. Here is a
+graph of the norm of the gradient of the above loss for <span
+class="math inline">\alpha = 0.95</span> in the above setup (note the
+scale is 1e7 instead of 1e12):</p>
+<p><img src="./recon_loss_grad_norms.png" /></p>
+<h3 id="on-smoothing">On Smoothing</h3>
+<p>In <span class="citation" data-cites="metz2021gradients">[5]</span>
+both smoothing of contact and randomization/probabilistic treatment of
+dynamics were talked about as potential solutions to the high variance
+of jacobians problem. In <span class="citation"
+data-cites="pang2023global">[6]</span>, an equivalence between the two
+was drawn. I think this could be a promising approach, but would take a
+little bit of thought to adapt to the current setup. Currently, I have a
+spring-damper setup similar to <span class="citation"
+data-cites="geilinger2020add xu2022accelerated">[7], [8]</span>, but
+would like to “smooth” things out. This would probably require replacing
+the <span class="math inline">\text{ReLU}</span> functions with a <span
+class="math inline">\text{Softplus}</span> function.</p>
+<h3 id="on-black-box-gradients">On Black-Box Gradients</h3>
+<p>Originally, REINFORCE is mentioned as an example of computing
+Black-Box gradients. Some methods using Complex Step Finite Differencing
+(CSFD) was mentioned:</p>
+<p><span class="math display"> f&#39;(x) \approx \text{Im}\left(
+\frac{f(x + hi)}{h} \right)</span></p>
+<p>These seem really cool, but there might have to be some thought about
+using this with high dimensional gradients.</p>
+<h2 id="looking-forward">Looking Forward</h2>
+<p>Looking forward, I want to do the following next week:</p>
+<ul>
+<li>Finish test suite</li>
+<li>Create V-PRISM presentation</li>
+</ul>
 <h2 class="unnumbered" id="references">References</h2>
-<div id="refs" class="references" role="doc-bibliography">
-<div id="ref-agnew2021amodal">
-<p>[1] W. Agnew, C. Xie, A. Walsman, O. Murad, Y. Wang, P. Domingos, and S. Srinivasa, “Amodal 3d reconstruction for robotic manipulation via stability and connectivity,” in <em>Conference on robot learning</em>, 2021, pp. 1498–1508.</p>
+<div id="refs" class="references csl-bib-body" data-entry-spacing="0"
+role="list">
+<div id="ref-song2018inferring" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[1] </div><div class="csl-right-inline">C.
+Song and A. Boularias, <span>“Inferring 3d shapes of unknown rigid
+objects in clutter through inverse physics reasoning,”</span> <em>IEEE
+Robotics and Automation Letters</em>, vol. 4, no. 2, pp. 201–208,
+2018.</div>
 </div>
-<div id="ref-song2018inferring">
-<p>[2] C. Song and A. Boularias, “Inferring 3d shapes of unknown rigid objects in clutter through inverse physics reasoning,” <em>IEEE Robotics and Automation Letters</em>, vol. 4, no. 2, pp. 201–208, 2018.</p>
+<div id="ref-agnew2021amodal" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[2] </div><div class="csl-right-inline">W.
+Agnew, C. Xie, A. Walsman, O. Murad, Y. Wang, P. Domingos, and S.
+Srinivasa, <span>“Amodal 3d reconstruction for robotic manipulation via
+stability and connectivity,”</span> in <em>Conference on robot
+learning</em>, 2021, pp. 1498–1508.</div>
 </div>
-<div id="ref-remelli2020meshsdf">
-<p>[3] E. Remelli, A. Lukoianov, S. Richter, B. Guillard, T. Bagautdinov, P. Baque, and P. Fua, “Meshsdf: Differentiable iso-surface extraction,” <em>Advances in Neural Information Processing Systems</em>, vol. 33, pp. 22468–22478, 2020.</p>
+<div id="ref-park2019deepsdf" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[3] </div><div class="csl-right-inline">J.
+J. Park, P. Florence, J. Straub, R. Newcombe, and S. Lovegrove,
+<span>“Deepsdf: Learning continuous signed distance functions for shape
+representation,”</span> in <em>Proceedings of the IEEE/CVF conference on
+computer vision and pattern recognition</em>, 2019, pp. 165–174.</div>
 </div>
-<div id="ref-park2019deepsdf">
-<p>[4] J. J. Park, P. Florence, J. Straub, R. Newcombe, and S. Lovegrove, “Deepsdf: Learning continuous signed distance functions for shape representation,” in <em>Proceedings of the ieee/cvf conference on computer vision and pattern recognition</em>, 2019, pp. 165–174.</p>
+<div id="ref-wright2024v" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[4] </div><div class="csl-right-inline">H.
+Wright, W. Zhi, M. Johnson-Roberson, and T. Hermans, <span>“V-prism:
+Probabilistic mapping of unknown tabletop scenes,”</span> <em>arXiv
+preprint arXiv:2403.08106</em>, 2024.</div>
 </div>
-<div id="ref-van2020learning">
-<p>[5] M. Van der Merwe, Q. Lu, B. Sundaralingam, M. Matak, and T. Hermans, “Learning continuous 3d reconstructions for geometrically aware grasping,” in <em>2020 ieee international conference on robotics and automation (icra)</em>, 2020, pp. 11516–11522.</p>
+<div id="ref-metz2021gradients" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[5] </div><div class="csl-right-inline">L.
+Metz, C. D. Freeman, S. S. Schoenholz, and T. Kachman, <span>“Gradients
+are not all you need,”</span> <em>arXiv preprint arXiv:2111.05803</em>,
+2021.</div>
 </div>
-<div id="ref-wright2024v">
-<p>[6] H. Wright, W. Zhi, M. Johnson-Roberson, and T. Hermans, “V-prism: Probabilistic mapping of unknown tabletop scenes,” <em>arXiv preprint arXiv:2403.08106</em>, 2024.</p>
+<div id="ref-pang2023global" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[6] </div><div class="csl-right-inline">T.
+Pang, H. T. Suh, L. Yang, and R. Tedrake, <span>“Global planning for
+contact-rich manipulation via local smoothing of quasi-dynamic contact
+models,”</span> <em>IEEE Transactions on robotics</em>, 2023.</div>
 </div>
-<div id="ref-zhang2018learning">
-<p>[7] X. Zhang, Z. Zhang, C. Zhang, J. Tenenbaum, B. Freeman, and J. Wu, “Learning to reconstruct shapes from unseen classes,” <em>Advances in neural information processing systems</em>, vol. 31, 2018.</p>
+<div id="ref-geilinger2020add" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[7] </div><div class="csl-right-inline">M.
+Geilinger, D. Hahn, J. Zehnder, M. Bächer, B. Thomaszewski, and S.
+Coros, <span>“Add: Analytically differentiable dynamics for multi-body
+systems with frictional contact,”</span> <em>ACM Transactions on
+Graphics (TOG)</em>, vol. 39, no. 6, pp. 1–15, 2020.</div>
 </div>
-<div id="ref-metz2021gradients">
-<p>[8] L. Metz, C. D. Freeman, S. S. Schoenholz, and T. Kachman, “Gradients are not all you need,” <em>arXiv preprint arXiv:2111.05803</em>, 2021.</p>
-</div>
-<div id="ref-zhong2023improving">
-<p>[9] Y. D. Zhong, J. Han, B. Dey, and G. O. Brikis, “Improving gradient computation for differentiable physics simulation with contacts,” in <em>Learning for dynamics and control conference</em>, 2023, pp. 128–141.</p>
-</div>
-<div id="ref-zhong2022differentiable">
-<p>[10] Y. D. Zhong, J. Han, and G. O. Brikis, “Differentiable physics simulations with contacts: Do they have correct gradients wrt position, velocity and control?” in <em>ICML 2022 2nd ai for science workshop</em>.</p>
-</div>
-<div id="ref-pang2023global">
-<p>[11] T. Pang, H. T. Suh, L. Yang, and R. Tedrake, “Global planning for contact-rich manipulation via local smoothing of quasi-dynamic contact models,” <em>IEEE Transactions on robotics</em>, 2023.</p>
+<div id="ref-xu2022accelerated" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[8] </div><div class="csl-right-inline">J.
+Xu, V. Makoviychuk, Y. Narang, F. Ramos, W. Matusik, A. Garg, and M.
+Macklin, <span>“Accelerated policy learning with parallel differentiable
+simulation,”</span> <em>arXiv preprint arXiv:2204.07137</em>,
+2022.</div>
 </div>
 </div>
 </body>
