@@ -228,6 +228,8 @@ reconstructions, and couple with V-PRISM</li>
 <li>Create a test suite of 5-10 examples</li>
 <li>Then, explore gradient computation</li>
 </ul>
+<p>I didn’t have a ton of time this week to spend on stuff, but below is
+what I have.</p>
 <h2 id="thinking-about-the-pitch">Thinking about the Pitch</h2>
 <p>Previously, the pitch was something like:</p>
 <ul>
@@ -274,6 +276,9 @@ reproduce it
 to be retrained for direct comparison.</li>
 </ul></li>
 </ul>
+<p><strong>Question:</strong> Could we just do something like connecting
+our method with a pushing or grasping or something task in simulation
+for downstream stuff?</p>
 <h2 id="new-test-suite">New Test Suite</h2>
 <p>Some concerns were brought up about overfitting to the square
 example:</p>
@@ -289,8 +294,34 @@ could have the following examples</p>
 <li>3D mesh of something (like mustard bottle)</li>
 <li>3D real-world object</li>
 </ul>
+<p>Here are examples of what some of that fake data would look like (2D
+examples):</p>
+<div class="columns">
+<div class="column">
+<p><img src="./fake_2d_data_circle.png" /></p>
+</div><div class="column">
+<p><img src="./fake_2d_data_square.png" /></p>
+</div><div class="column">
+<p><img src="./fake_2d_data_hourglass.png" /></p>
+</div>
+</div>
+<p>Then, I figure I could port over something like this for the 3D
+cube:</p>
+<p><img src="./cube_primitive.png" /></p>
+<p>For the more complex stuff, we could do:</p>
+<div class="columns">
+<div class="column">
+<p><img src="./rgb_airplane.jpg" /></p>
+</div><div class="column">
+<p><img src="./rgb_bottle.jpg" /></p>
+</div>
+</div>
+<p><strong>Question:</strong> Do we feel this suite would provide a
+comprehensive evaluation of the method?</p>
 <p>I need to add some updates to my code for the 3D stuff to handle
 rotations, etc. correctly.</p>
+<p><em>Also:</em> We will have to update things when we move to
+multi-object setups</p>
 <h2 id="gradient-computation">Gradient Computation</h2>
 <p>Last time, I brought up some concerns about gradients. I based my
 investigation loosely off of <span class="citation"
@@ -326,6 +357,8 @@ graph of the norm of the gradient of the above loss for <span
 class="math inline">\alpha = 0.95</span> in the above setup (note the
 scale is 1e7 instead of 1e12):</p>
 <p><img src="./recon_loss_grad_norms.png" /></p>
+<p><strong>Question:</strong> Do we think this could work at combatting
+gradients problem?</p>
 <h3 id="on-smoothing">On Smoothing</h3>
 <p>In <span class="citation" data-cites="metz2021gradients">[5]</span>
 both smoothing of contact and randomization/probabilistic treatment of
@@ -342,7 +375,10 @@ class="math inline">\text{Softplus}</span> function.</p>
 <h3 id="on-black-box-gradients">On Black-Box Gradients</h3>
 <p>Originally, REINFORCE is mentioned as an example of computing
 Black-Box gradients. Some methods using Complex Step Finite Differencing
-(CSFD) was mentioned:</p>
+(CSFD) <span class="citation" data-cites="martins2003complex">[9]</span>
+was mentioned, which has been used for SLAM <span class="citation"
+data-cites="peng2024x">[10]</span> and deformable simulation <span
+class="citation" data-cites="luo2019accelerated">[11]</span>:</p>
 <p><span class="math display"> f&#39;(x) \approx \text{Im}\left(
 \frac{f(x + hi)}{h} \right)</span></p>
 <p>These seem really cool, but there might have to be some thought about
@@ -352,6 +388,12 @@ using this with high dimensional gradients.</p>
 <ul>
 <li>Finish test suite</li>
 <li>Create V-PRISM presentation</li>
+</ul>
+<p><strong>Other Questions:</strong></p>
+<ul>
+<li>What other things should I focus on?</li>
+<li>How should I go about investigating the gradients problem
+(explosion)?</li>
 </ul>
 <h2 class="unnumbered" id="references">References</h2>
 <div id="refs" class="references csl-bib-body" data-entry-spacing="0"
@@ -408,6 +450,26 @@ Xu, V. Makoviychuk, Y. Narang, F. Ramos, W. Matusik, A. Garg, and M.
 Macklin, <span>“Accelerated policy learning with parallel differentiable
 simulation,”</span> <em>arXiv preprint arXiv:2204.07137</em>,
 2022.</div>
+</div>
+<div id="ref-martins2003complex" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[9] </div><div class="csl-right-inline">J.
+R. Martins, P. Sturdza, and J. J. Alonso, <span>“The complex-step
+derivative approximation,”</span> <em>ACM Transactions on Mathematical
+Software (TOMS)</em>, vol. 29, no. 3, pp. 245–262, 2003.</div>
+</div>
+<div id="ref-peng2024x" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[10] </div><div class="csl-right-inline">Z.
+Peng, Y. Yang, T. Shao, C. Jiang, and K. Zhou, <span>“X-SLAM: Scalable
+dense SLAM for task-aware optimization using CSFD,”</span> <em>ACM
+Transactions on Graphics (TOG)</em>, vol. 43, no. 4, pp. 1–15,
+2024.</div>
+</div>
+<div id="ref-luo2019accelerated" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[11] </div><div class="csl-right-inline">R.
+Luo, W. Xu, T. Shao, H. Xu, and Y. Yang, <span>“Accelerated complex-step
+finite difference for expedient deformable simulation,”</span> <em>ACM
+Transactions on Graphics (TOG)</em>, vol. 38, no. 6, pp. 1–16,
+2019.</div>
 </div>
 </div>
 </body>
