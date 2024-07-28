@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="author" content="Herbert Wright1, Weiming Zhi2, Matthew Johnson-Roberson2, Tucker Hermans1,3 1University of Utah, 2Carnegie Mellon University, 3NVIDIA">
+  <title>V-PRISM: Probabilistic Mapping of Unknown Tabletop Scenes</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@^4//dist/reset.css">
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@^4//dist/reveal.css">
+  <style>
+    .reveal .sourceCode {  /* see #7635 */
+      overflow: visible;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for citations */
+    div.csl-bib-body { }
+    div.csl-entry {
+      clear: both;
+      margin-bottom: 0em;
+    }
+    .hanging-indent div.csl-entry {
+      margin-left:2em;
+      text-indent:-2em;
+    }
+    div.csl-left-margin {
+      min-width:2em;
+      float:left;
+    }
+    div.csl-right-inline {
+      margin-left:2em;
+      padding-left:1em;
+    }
+    div.csl-indent {
+      margin-left: 2em;
+    }  </style>
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@^4//dist/theme/white.css" id="theme">
+  <link rel="stylesheet" href="styles.css"/>
+  <script defer=""
+  src="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.js"></script>
+  <script>document.addEventListener("DOMContentLoaded", function () {
+ var mathElements = document.getElementsByClassName("math");
+ var macros = [];
+ for (var i = 0; i < mathElements.length; i++) {
+  var texText = mathElements[i].firstChild;
+  if (mathElements[i].tagName == "SPAN") {
+   katex.render(texText.data, mathElements[i], {
+    displayMode: mathElements[i].classList.contains('display'),
+    throwOnError: false,
+    macros: macros,
+    fleqn: false
+   });
+}}});
+  </script>
+  <link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css" />
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide">
+  <h1 class="title">V-PRISM: Probabilistic Mapping of Unknown Tabletop
+Scenes</h1>
+  <p class="author"><span class="med-text">Herbert Wright<sup>1</sup>,
+Weiming Zhi<sup>2</sup>, Matthew Johnson-Roberson<sup>2</sup>, Tucker
+Hermans<sup>1,3</sup></span> <span
+class="small-text"><sup>1</sup>University of Utah, <sup>2</sup>Carnegie
+Mellon University, <sup>3</sup>NVIDIA</span></p>
+  <p class="date"><img src="fig1_updated.png" class="title-img"/></p>
+</section>
+
+<section id="motivation" class="slide level2">
+<h2>Motivation</h2>
+<ul>
+<li>Many algorithms for manipulation need a 3D representation of a
+scene</li>
+<li>Most existing reconstruction methods don’t contain <em>principled
+uncertainty information</em></li>
+<li>Most existing methods also don’t take <em>multiple objects</em> into
+account</li>
+</ul>
+</section>
+<section id="contributions" class="slide level2">
+<h2>Contributions</h2>
+<ul>
+<li>Formulate reconstruction as multi-class mapping problem</li>
+<li>A <em>Bayesian</em> framework for building <em>continuous</em>
+segmentation maps of tabletop scenes</li>
+<li>An object-centric sampling method to encode depth information</li>
+</ul>
+<p><img data-src="sigmoidbhmfails.png" style="width:76.0%" /></p>
+</section>
+<section id="background-hilbert-maps" class="slide level2">
+<h2>Background: Hilbert Maps</h2>
+<div class="columns">
+<div class="column" style="width:40%;">
+<figure>
+<img data-src="./hilbertmaps.png"
+alt="Figure from [1], Input data on Left, Hilbert map on Right, SVM in Middle" />
+<figcaption aria-hidden="true">Figure from <span class="citation"
+data-cites="ramos2016hilbert">[1]</span>, Input data on
+<strong>Left</strong>, Hilbert map on <strong>Right</strong>, SVM in
+<strong>Middle</strong></figcaption>
+</figure>
+<figure>
+<img data-src="./hingepoints.png" style="width:65.0%"
+alt="Example of hingepoints" />
+<figcaption aria-hidden="true">Example of hingepoints</figcaption>
+</figure>
+</div><div class="column" style="width:60%;">
+<ul>
+<li>Hilbert Maps, introduced in <span class="citation"
+data-cites="ramos2016hilbert">[1]</span>, are a technique for mapping an
+environment via depth measurements</li>
+<li>First, a dataset is created with terminal points of each ray and
+negative sampled ones</li>
+<li>Next, a set of hinge points are constructed in a grid</li>
+<li>Then, regularized logistic regression is run in order to find
+weights <span class="math inline">w</span> for a map <span
+class="math inline">m</span> with occupancy probability: <span
+class="math display"> m(x) = \sigma (w^\top \phi(x)) </span> where <span
+class="math inline">\phi</span> is a feature transform constructed from
+the hinge points</li>
+</ul>
+</div>
+</div>
+</section>
+<section id="background-bayesian-hilbert-maps" class="slide level2">
+<h2>Background: Bayesian Hilbert Maps</h2>
+<ul>
+<li>Hilbert Maps were given a Bayesian treatment in <span
+class="citation" data-cites="senanayake2017bayesian">[2]</span></li>
+<li>Weights <span class="math inline">w</span> were modeled as a
+Gaussian <span class="math inline">w \sim \mathcal N(\mu,
+\Sigma)</span></li>
+<li>Variational inference as described in <span class="citation"
+data-cites="jaakkola1997variational">[3]</span> was performed to recover
+a Posterior distribution over the weights, <span
+class="math inline">\mathcal N(\hat \mu, \hat \Sigma)</span>. This
+involved an iterative EM algorithm.</li>
+<li>Predictions were made by approximating <span
+class="math inline">\mathbb E_w [\sigma (w^\top \phi(x))]</span></li>
+<li>Because of the Bayesian treatment, the method exhibits principled
+uncertainty</li>
+</ul>
+<figure>
+<img data-src="./bhm.png" alt="Figure from [2]" />
+<figcaption aria-hidden="true">Figure from <span class="citation"
+data-cites="senanayake2017bayesian">[2]</span></figcaption>
+</figure>
+</section>
+<section id="problem-setup" class="slide level2">
+<h2>Problem Setup</h2>
+<ul>
+<li>We phrase the scene reconstruction problem as a mapping problem</li>
+<li>Given a depth observation (point cloud) of a scene and a correct
+instance segmentation, construct a map that maps points in 3D space to
+one of the segmentations (or empty space)</li>
+<li>This is a multiclass segmentation/mapping problem, because we want
+to avoid interpenetration between the reconstructions (see image
+below)</li>
+<li>We assume we know our camera position (relative to point cloud) and
+that points in between the camera and point cloud are unoccupied</li>
+<li>We assume each object lies on or above a planar surface such as a
+tabletop</li>
+</ul>
+<p><img data-src="./sigmoidbhmfails.png" style="width:60.0%" /></p>
+</section>
+<section id="method-overview" class="slide level2">
+<h2>Method Overview</h2>
+<p><img data-src="method_overview.png" /></p>
+<ul>
+<li>We want to adapt a similar strategy as Bayesian Hilbert Maps <span
+class="citation" data-cites="senanayake2017bayesian">[2]</span> for our
+task</li>
+<li>First, we perform negative sampling, but adapt it to an
+object-centric mapping task</li>
+<li>Then we run an EM algorithm with our constructed dataset to create a
+probabilistic multiclass map
+<ul>
+<li>This means we will need to adapt the original EM algorithm from
+<span class="citation" data-cites="jaakkola1997variational">[3]</span>
+to extend to a softmax activation function</li>
+</ul></li>
+</ul>
+</section>
+<section id="negative-sampling" class="slide level2">
+<h2>Negative Sampling</h2>
+<ul>
+<li>Points at end of the ray are labeled as occupied</li>
+<li>Randomly sample points along the rays that are specifically
+<em>nearby the objects</em></li>
+<li>Find the table with RANSAC <span class="citation"
+data-cites="fischler1981random">[4]</span> and sample points underneath
+it <em>nearby the objects</em></li>
+<li>Run grid subsampling from <span class="citation"
+data-cites="thomas2019learning">[5]</span> in order to reduce the total
+amount of points and make the data more uniform</li>
+</ul>
+<p><img data-src="./placeholder_negative_sampling.png"
+style="width:80.0%" /></p>
+</section>
+<section id="softmax-em-algorithm-training" class="slide level2">
+<h2>Softmax EM Algorithm: Training</h2>
+<div class="columns">
+<div class="column" style="width:65%;">
+<ul>
+<li>We model weights as a matrix <span class="math inline">W</span>
+where each row is normally distributed: <span class="math inline">W_k
+\sim \mathcal N (\mu_k, \Sigma_k)</span></li>
+<li>Using math from <span class="citation"
+data-cites="bouchard2007efficient">[6]</span>, which builds off of <span
+class="citation" data-cites="jaakkola1997variational">[3]</span>, We can
+develop an EM algorithm which iterates the following updates:</li>
+</ul>
+<p><span style="font-size: 1rem;"> <span class="math display">
+\hat{\Sigma}^{-1}_k = \bar{\Sigma}^{-1} + 2 \sum_{i = 1}^n
+\lambda(\xi_{i,k}) \phi(  x_i) \phi(  x_i)^\top </span> <span
+class="math display"> \hat{\mu}_k = \hat{\Sigma}_k \left[
+\bar{\Sigma}^{-1}_k \bar{\mu}_k + \sum_{i = 1}^n \left( y_{i, k} -
+\frac{1}{2} + 2 \alpha_i \lambda(\xi_{i, k}) \right) \phi(  x_i) \right]
+</span> <span class="math display"> \alpha_i = \frac{\frac{1}{2}
+(\frac{c}{2} - 1) + \sum_{k=1}^c \lambda(\xi_k) \mu_k^\top
+\phi(  x_i)}{\sum_{k=1}^c \lambda(\xi_k)} </span> <span
+class="math display"> \xi^2_{i, k} = \phi(  x_i)^\top \Sigma_k
+\phi(  x_i) + (\mu^\top_k \phi(  x_i))^2 + \alpha_i^2 - 2\alpha_i
+\mu^\top_k \phi(  x_i) </span> </span></p>
+</div><div class="column" style="width:35%;">
+<p><img data-src="./algorithm.png" /></p>
+</div>
+</div>
+</section>
+<section id="inference-of-softmax-map" class="slide level2">
+<h2>Inference of Softmax Map</h2>
+<ul>
+<li>In order to predict new points we need to evaluate: <span
+class="math display"> \hat P(y = k | x) = \mathbb E_W \left[
+\text{softmax} (W \phi(x)) \right]_k </span></li>
+<li>This doesn’t have a closed form solution, but <span class="citation"
+data-cites="daunizeau2017semi">[7]</span> outlines how you can
+approximate it with the equality: <span class="math display">
+\text{softmax}(  a)_k = \frac{1}{2 - c + \sum_{i \neq k} \sigma (  a_k
+-   a_i)^{-1}}, </span></li>
+<li>Using this approximation, combined with the one used for Bayesian
+Hilbert Maps, we get: <span class="math display"> \mathbb E_{  W} \left[
+\text{softmax} ({  W} \phi(  x)) \right]_k \approx \frac{1}{2 - c +
+\sum_{i \neq k} \mathbb E [\sigma (\tilde{  z}_i)]^{-1}} </span> where
+<span class="math inline">\tilde{  z}_i = [  W \phi(  x)]_k -   [  W
+\phi (  x)]_i</span>.</li>
+</ul>
+</section>
+<section id="experiments-overview" class="slide level2">
+<h2>Experiments Overview</h2>
+<ul>
+<li>We want to answer the following questions via experiments:
+<ul>
+<li>Can we accurately reconstruct completely unknown objects?</li>
+<li>Does our new negative sampling method improve reconstruction
+quality?</li>
+<li>Is our method robust to noisy scenes?</li>
+<li>Does our map capture understandable and principled uncertainty about
+the scene?</li>
+</ul></li>
+<li>We want to experiment both in simulation and in the real world.
+<ul>
+<li>Simulated scenes are created using different object datasets <span
+class="citation"
+data-cites="calli2015ycb chang2015shapenet deitke2023objaverse">[8]–[10]</span></li>
+<li>Segmentations for real world scenes are computed using Segment
+Anything <span class="citation"
+data-cites="kirillov2023segment">[11]</span></li>
+</ul></li>
+<li>Implemented in PyTorch, Code available at: <a
+href="https://github.com/Herb-Wright/v-prism">https://github.com/Herb-Wright/v-prism</a></li>
+</ul>
+</section>
+<section id="reconstruction-quality" class="slide level2">
+<h2>Reconstruction Quality</h2>
+<p><img data-src="table.png" /></p>
+<div class="columns">
+<div class="column" style="width:33%;">
+<p><img data-src="rgb1.jpg" style="width:80.0%" /></p>
+<p><span class="med-text">Example Scene</span></p>
+</div><div class="column" style="width:33%;">
+<p><img data-src="rgb.jpg" style="width:80.0%" /></p>
+<p><span class="med-text">Example Scene</span></p>
+</div><div class="column" style="width:33%;">
+<p><img data-src="reconstruction_ycb.png" style="width:60.0%" /></p>
+<p><span class="med-text">Example Reconstruction</span></p>
+</div>
+</div>
+</section>
+<section id="negative-sampling-1" class="slide level2">
+<h2>Negative Sampling</h2>
+<ul>
+<li>Ablation results of our negative sampling method in simulation
+suggest our negative sampling method is superior to alternatives:</li>
+</ul>
+<p><img data-src="./ablation_table.png" /></p>
+</section>
+<section id="robustness" class="slide level2">
+<h2>Robustness</h2>
+<p><em>Here is a Qualitative example of reconstructing a noisy real
+world scene:</em></p>
+<div class="columns">
+<div class="column">
+<p>Point cloud <img data-src="out2.gif" /></p>
+</div><div class="column">
+<p>Reconstruction <img data-src="out1.gif" /></p>
+</div>
+</div>
+</section>
+<section id="robustness-1" class="slide level2">
+<h2>Robustness</h2>
+<p><em>Here is a comparison with PointSDF <span class="citation"
+data-cites="van2020learning">[12]</span>:</em></p>
+<p><img data-src="recon_vs_pointsdf_with_labels.png"
+style="width:67.0%" /></p>
+</section>
+<section id="uncertainty" class="slide level2">
+<h2>Uncertainty</h2>
+<p><img data-src="uncertainty_fig_with_labels.png"
+style="width:70.0%" /></p>
+<ul>
+<li>We compare uncertainty of V-PRISM <span class="citation"
+data-cites="wright2024v">[13]</span> with a non-probabilistic
+alternative</li>
+<li>Uncertainty is high in heavily occluded areas of the scene in our
+method, but not the alternative’s</li>
+</ul>
+</section>
+<section id="future-work" class="slide level2">
+<h2>Future Work</h2>
+<ul>
+<li>Right now, the reconstructions are not always physically stable (see
+image below).</li>
+<li>In the future I want to work on enforcing a stability <em>prior</em>
+on reconstructed meshes.</li>
+<li>Instead of a heuristic loss function like <span class="citation"
+data-cites="agnew2021amodal">[14]</span>, I want to somehow incorporate
+differentiable simulation to construct a differentiable loss directly on
+stability</li>
+</ul>
+<p><img data-src="./out_drake.gif" style="width:30.0%" /></p>
+</section>
+<section id="references" class="slide level2 unnumbered">
+<h2 class="unnumbered">References</h2>
+<div id="refs" class="references csl-bib-body" data-entry-spacing="0"
+role="list">
+<div id="ref-ramos2016hilbert" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[1] </div><div class="csl-right-inline">F.
+Ramos and L. Ott, <span>“Hilbert maps: Scalable continuous occupancy
+mapping with stochastic gradient descent,”</span> <em>The International
+Journal of Robotics Research</em>, vol. 35, no. 14, pp. 1717–1730,
+2016.</div>
+</div>
+<div id="ref-senanayake2017bayesian" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[2] </div><div class="csl-right-inline">R.
+Senanayake and F. Ramos, <span>“Bayesian hilbert maps for dynamic
+continuous occupancy mapping,”</span> in <em>Conference on robot
+learning</em>, 2017, pp. 458–471.</div>
+</div>
+<div id="ref-jaakkola1997variational" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[3] </div><div class="csl-right-inline">T.
+S. Jaakkola and M. I. Jordan, <span>“A variational approach to bayesian
+logistic regression models and their extensions,”</span> in <em>Sixth
+international workshop on artificial intelligence and statistics</em>,
+1997, pp. 283–294.</div>
+</div>
+<div id="ref-fischler1981random" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[4] </div><div class="csl-right-inline">M.
+A. Fischler and R. C. Bolles, <span>“Random sample consensus: A paradigm
+for model fitting with applications to image analysis and automated
+cartography,”</span> <em>Communications of the ACM</em>, vol. 24, no. 6,
+pp. 381–395, 1981.</div>
+</div>
+<div id="ref-thomas2019learning" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[5] </div><div class="csl-right-inline">H.
+Thomas, <span>“Learning new representations for 3D point cloud semantic
+segmentation,”</span> PhD thesis, Universit<span>é</span> Paris sciences
+et lettres, 2019.</div>
+</div>
+<div id="ref-bouchard2007efficient" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[6] </div><div class="csl-right-inline">G.
+Bouchard, <span>“Efficient bounds for the softmax function and
+applications to approximate inference in hybrid models,”</span> in
+<em>NIPS 2007 workshop for approximate bayesian inference in
+continuous/hybrid systems</em>, 2007, vol. 6.</div>
+</div>
+<div id="ref-daunizeau2017semi" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[7] </div><div class="csl-right-inline">J.
+Daunizeau, <span>“Semi-analytical approximations to statistical moments
+of sigmoid and softmax mappings of normal variables,”</span> <em>arXiv
+preprint arXiv:1703.00091</em>, 2017.</div>
+</div>
+<div id="ref-calli2015ycb" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[8] </div><div class="csl-right-inline">B.
+Calli, A. Singh, A. Walsman, S. Srinivasa, P. Abbeel, and A. M. Dollar,
+<span>“The ycb object and model set: Towards common benchmarks for
+manipulation research,”</span> in <em>2015 international conference on
+advanced robotics (ICAR)</em>, 2015, pp. 510–517.</div>
+</div>
+<div id="ref-chang2015shapenet" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[9] </div><div class="csl-right-inline">A.
+X. Chang, T. Funkhouser, L. Guibas, P. Hanrahan, Q. Huang, Z. Li, S.
+Savarese, M. Savva, S. Song, H. Su, J. Xiao, L. Yi, and F. Yu,
+<span>“<span>ShapeNet: An Information-Rich 3D Model
+Repository</span>,”</span> Stanford University — Princeton University —
+Toyota Technological Institute at Chicago, arXiv:1512.03012 [cs.GR],
+2015.</div>
+</div>
+<div id="ref-deitke2023objaverse" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[10] </div><div class="csl-right-inline">M.
+Deitke, D. Schwenk, J. Salvador, L. Weihs, O. Michel, E. VanderBilt, L.
+Schmidt, K. Ehsani, A. Kembhavi, and A. Farhadi, <span>“Objaverse: A
+universe of annotated 3d objects,”</span> in <em>Proceedings of the
+IEEE/CVF conference on computer vision and pattern recognition</em>,
+2023, pp. 13142–13153.</div>
+</div>
+<div id="ref-kirillov2023segment" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[11] </div><div class="csl-right-inline">A.
+Kirillov, E. Mintun, N. Ravi, H. Mao, C. Rolland, L. Gustafson, T. Xiao,
+S. Whitehead, A. C. Berg, W.-Y. Lo, P. Dollár, and R. Girshick,
+<span>“Segment anything,”</span> <em>arXiv:2304.02643</em>, 2023.</div>
+</div>
+<div id="ref-van2020learning" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[12] </div><div class="csl-right-inline">M.
+Van der Merwe, Q. Lu, B. Sundaralingam, M. Matak, and T. Hermans,
+<span>“Learning continuous 3d reconstructions for geometrically aware
+grasping,”</span> in <em>2020 IEEE international conference on robotics
+and automation (ICRA)</em>, 2020, pp. 11516–11522.</div>
+</div>
+<div id="ref-wright2024v" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[13] </div><div class="csl-right-inline">H.
+Wright, W. Zhi, M. Johnson-Roberson, and T. Hermans, <span>“V-prism:
+Probabilistic mapping of unknown tabletop scenes,”</span> <em>arXiv
+preprint arXiv:2403.08106</em>, 2024.</div>
+</div>
+<div id="ref-agnew2021amodal" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[14] </div><div class="csl-right-inline">W.
+Agnew, C. Xie, A. Walsman, O. Murad, Y. Wang, P. Domingos, and S.
+Srinivasa, <span>“Amodal 3d reconstruction for robotic manipulation via
+stability and connectivity,”</span> in <em>Conference on robot
+learning</em>, 2021, pp. 1498–1508.</div>
+</div>
+</div>
+</section>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/reveal.js@^4//dist/reveal.js"></script>
+
+  <!-- reveal.js plugins -->
+  <script src="https://unpkg.com/reveal.js@^4//plugin/notes/notes.js"></script>
+  <script src="https://unpkg.com/reveal.js@^4//plugin/search/search.js"></script>
+  <script src="https://unpkg.com/reveal.js@^4//plugin/zoom/zoom.js"></script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+        // Display controls in the bottom right corner
+        controls: true,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: true,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'bottom-right',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: false,
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: false,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: true,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'default',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: true,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'slide',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'fade',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // reveal.js plugins
+        plugins: [
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    </body>
+</html>
