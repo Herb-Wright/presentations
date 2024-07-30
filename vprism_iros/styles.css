@@ -1,5 +1,5 @@
 .reveal .title {
-    font-size: 4rem;
+    font-size: 3rem;
     text-transform: none;
 }
 
@@ -17,12 +17,15 @@ p, li {
 
 .title-img {
     /* width: min(35vh, 35vw); */
-    width: 30%
+    width: 40%
 }
 
 img {
     border: none !important;
     box-shadow: none !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    margin: 0 !important;
 }
 
 .small-text {
@@ -30,18 +33,25 @@ img {
 }
 
 .med-text {
-    font-size: 1.7rem !important;
+    font-size: 1.5rem !important;
 }
-/* .katex-display {
-    margin: 0 0 0.6rem 0 !important;
-    font-size: 0.5rem;
-} */
+
 
 figcaption {
-    font-size: 1.25rem;
+    font-size: 1rem;
+    margin-bottom:1rem;
 }
 
 .references {
     font-size: 0.90rem;
     text-align: left;
 }
+
+.reveal .slide-number {
+    font-size: 2rem;
+}
+
+#footnotes * {
+    font-size: 1rem;
+}
+
