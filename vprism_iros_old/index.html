@@ -369,30 +369,31 @@ method, but not the alternative’s</li>
 </section>
 <section id="future-work" class="slide level2">
 <h2>Future Work</h2>
-<!-- - Right now, the reconstructions are not always physically stable (see image below). 
-- In the future I want to work on enforcing a stability *prior* on reconstructed meshes.
-- Instead of a heuristic loss function like [@agnew2021amodal], I want to somehow incorporate differentiable simulation to construct a differentiable loss directly on stability
-- I also want to utilize V-PRISM maps to inform grasping in a feedback loop.
-
-![](./out_drake.gif){width=30%} -->
 <ul>
-<li>Enforce object level prior
-<ul>
-<li>Informative prior without over-regularizing out of distribution
-objects</li>
-</ul></li>
-<li>Uncertainty-awareness in downstream tasks like grasping in
-clutters</li>
-<li>Use uncertainty for active learning (wrist-mounted camera,
-tactile)</li>
+<li>Right now, the reconstructions are not always physically stable (see
+image below).</li>
+<li>In the future I want to work on enforcing a stability <em>prior</em>
+on reconstructed meshes.</li>
+<li>Instead of a heuristic loss function like <span class="citation"
+data-cites="agnew2021amodal">(Agnew et al. 2021)</span>, I want to
+somehow incorporate differentiable simulation to construct a
+differentiable loss directly on stability</li>
+<li>I also want to utilize V-PRISM maps to inform grasping in a feedback
+loop.</li>
 </ul>
-<p><img data-src="./airplane2.gif" style="width:25.0%" /> <img
-data-src="./mug2.gif" style="width:25.0%" /></p>
+<p><img data-src="./out_drake.gif" style="width:30.0%" /></p>
 </section>
 <section id="references" class="slide level2 unnumbered">
 <h2 class="unnumbered">References</h2>
 <div id="refs" class="references csl-bib-body hanging-indent"
 data-entry-spacing="0" role="list">
+<div id="ref-agnew2021amodal" class="csl-entry" role="listitem">
+Agnew, William, Christopher Xie, Aaron Walsman, Octavian Murad, Yubo
+Wang, Pedro Domingos, and Siddhartha Srinivasa. 2021. <span>“Amodal 3d
+Reconstruction for Robotic Manipulation via Stability and
+Connectivity.”</span> In <em>Conference on Robot Learning</em>,
+1498–508. PMLR.
+</div>
 <div id="ref-bouchard2007efficient" class="csl-entry" role="listitem">
 Bouchard, Guillaume. 2007. <span>“Efficient Bounds for the Softmax
 Function and Applications to Approximate Inference in Hybrid
