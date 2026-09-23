@@ -94,7 +94,7 @@ For stochastic systems, it often makes more sense to talk about a *stationary di
 $$ x_{t+1} = A x_t + B u_t + w_t, \qquad w_t \sim \mathcal N(0, \Sigma) \text{ I.I.D.} $$
 
 <!-- 
-ANSWER: x_t \to N(0, P), where P satisfies P = A_*^\top P A_* + \Sigma.
+ANSWER: x_t \to N(0, P), where P satisfies P = A_* P A_*^T + \Sigma.
 -->
 
 # Example: Manipulator Equations with Uncertainty
