@@ -214,7 +214,7 @@ $$ \alpha_{t+1} \geq \| A + B K \|_2 \alpha + r_w $$
 
 # Example: Tube Trajectory Optimization
 
-TODO: image
+![.](./tube_traj_opt.png)
 
 # Chance Constraints
 
