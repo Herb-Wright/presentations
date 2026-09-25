@@ -6,9 +6,9 @@ is optimized while a fixed PD error-feedback controller bounds the effect of a
 small additive disturbance.  The resulting position projection of the tube is
 drawn as a disk at every sample.
 
-Run from any directory with::
+Run from this project directory with::
 
-    python tube_traj_opt.py
+    uv run --python .venv/bin/python tube_traj_opt.py
 
 The default output is written next to this script as ``tube_traj_opt.png``.
 """
@@ -18,7 +18,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
+from matplotlib.patches import Circle
 import numpy as np
 from scipy.optimize import minimize
 
@@ -27,7 +27,7 @@ from scipy.optimize import minimize
 DT = 0.10
 HORIZON = 40
 TOTAL_TIME = DT * HORIZON
-RW = 0.012  # radius of the additive disturbance ball in R^4
+RW = 0.020  # radius of the additive disturbance ball in R^4
 GAMMA = 0.70
 SEED = 5170
 Y_AMPLITUDE = 2.0
@@ -58,7 +58,7 @@ def minimum_jerk_reference(
     """
     time = np.arange(horizon + 1, dtype=float) * dt
     tau = np.clip(time / (horizon * dt), 0.0, 1.0)
-    s = 10.0 * tau**3 - 15.0 * tau**4 + 6.0 * tau**5
+    s = tau**3 * (10.0 - 15.0 * tau + 6.0 * tau**2)
     ds = (30.0 * tau**2 - 60.0 * tau**3 + 30.0 * tau**4) / (horizon * dt)
     d2s = (60.0 * tau - 180.0 * tau**2 + 120.0 * tau**3) / (horizon * dt) ** 2
     # g(tau)=tau^3(1-tau)^3(2*tau-1), normalized to a +/-2 excursion.
@@ -230,86 +230,33 @@ def solve_tube_problem() -> dict[str, np.ndarray | float | object]:
     }
 
 
-def sample_noisy_rollouts(data: dict[str, np.ndarray | float | object], count: int = 4) -> list[np.ndarray]:
-    """Generate restrained, deterministic closed-loop disturbances for the plot."""
-    a = data["A"]
-    b = data["B"]
-    k = data["K"]
-    x_nom = data["x"]
-    u_nom = data["u"]
-    rng = np.random.default_rng(SEED)
-    trajectories: list[np.ndarray] = []
-    for _ in range(count):
-        x = np.zeros(4)
-        path = np.empty_like(x_nom)
-        path[0] = x
-        for t in range(HORIZON):
-            direction = rng.normal(size=4)
-            direction /= np.linalg.norm(direction)
-            radius = RW * rng.random() ** 0.25 * 0.78
-            disturbance = radius * direction
-            control = u_nom[t] + k @ (x - x_nom[t])
-            x = a @ x + b @ control + disturbance
-            path[t + 1] = x
-        trajectories.append(path)
-    return trajectories
-
-
 def make_figure(data: dict[str, np.ndarray | float | object]) -> plt.Figure:
-    """Draw a minimal 3-D lifted tube around the planar nominal trajectory."""
+    """Draw the planar reference, nominal, and the union of alpha disks."""
     plt.rcParams.update({"font.family": "Roboto", "font.size": 10})
     x_ref = data["x_ref"]
     x_opt = data["x"]
     alpha = data["alpha"]
-    trajectories = sample_noisy_rollouts(data, count=3)
+    fig, ax = plt.subplots(figsize=(12.0, 6.0), facecolor="white")
+    blue, orange, teal = "#2468a2", "#d8873d", "#2a9d8f"
 
-    fig = plt.figure(figsize=(12.0, 6.0), facecolor="white")
-    ax = fig.add_subplot(111, projection="3d")
-    blue, orange, teal, red = "#2468a2", "#d8873d", "#2a9d8f", "#c96b6b"
-
-    # Cross-sections use the planar normal and a visual z direction. z is not
-    # a dynamical state; it simply exposes the unit-ball tube in the figure.
-    # The optimizer stores [p_y, p_x, v_y, v_x], so swap the first two entries
-    # here to display physical (p_x, p_y) coordinates.
-    centers = np.column_stack((x_opt[:, 1], x_opt[:, 0], np.zeros(len(x_opt))))
-    tangent_xy = np.gradient(centers[:, :2], axis=0)
-    tangent_xy /= np.linalg.norm(tangent_xy, axis=1, keepdims=True)
-    normal = np.column_stack((-tangent_xy[:, 1], tangent_xy[:, 0], np.zeros(len(x_opt))))
-    binormal = np.tile(np.array([0.0, 0.0, 1.0]), (len(x_opt), 1))
-    theta = np.linspace(0.0, 2.0 * np.pi, 28)
-    ring = np.cos(theta)[None, :, None] * normal[:, None, :]
-    ring += np.sin(theta)[None, :, None] * binormal[:, None, :]
-    surface = centers[:, None, :] + alpha[:, None, None] * ring
-    ax.plot_surface(surface[..., 0], surface[..., 1], surface[..., 2],
-                    color=teal, alpha=0.38, linewidth=0.0, antialiased=True, shade=True)
-
-    for path in trajectories:
-        ax.plot(path[:, 1], path[:, 0], np.zeros(len(path)), color=red,
-                linewidth=0.8, alpha=0.34, zorder=2)
-    ax.plot(x_ref[:, 1], x_ref[:, 0], np.zeros(len(x_ref)), "--",
-            color=orange, linewidth=1.6, alpha=0.78, zorder=4)
-    ax.plot(x_opt[:, 1], x_opt[:, 0], np.zeros(len(x_opt)), color=blue,
-            linewidth=2.6, zorder=5)
-    ax.scatter([x_opt[0, 1]], [x_opt[0, 0]], [0.0], s=28, color="#202b35", zorder=6)
-    ax.scatter([x_opt[-1, 1]], [x_opt[-1, 0]], [0.0], s=36, color=orange,
-               edgecolor="white", linewidth=0.7, zorder=6)
-    ax.text(x_opt[0, 1] - 0.25, x_opt[0, 0] - 0.55, 0.0, "start", color="#202b35",
-            fontsize=8, zorder=7)
-    ax.text(x_opt[-1, 1] - 0.2, x_opt[-1, 0] - 0.55, 0.0, "goal", color="#202b35",
-            fontsize=8, zorder=7)
-
-    ax.set_xlim(-2.8, 2.8)
-    ax.set_ylim(-0.8, 10.8)
-    ax.set_zlim(-0.42, 0.42)
-    ax.set_box_aspect((11.0, 5.6, 1.8))
-    ax.view_init(elev=34.0, azim=-64.0)
+    # Each patch is the exact position projection of alpha_t E. Keeping the
+    # disks independent avoids interpolating across the sampled tube.
+    for (center_x, center_y), radius in zip(x_opt[:, :2], alpha):
+        ax.add_patch(Circle((center_x, center_y), float(radius),
+                            facecolor=teal, edgecolor=teal, linewidth=0.75,
+                            alpha=0.12, zorder=1))
+    ax.plot(x_ref[:, 0], x_ref[:, 1], "--", color=orange, linewidth=1.8,
+            alpha=0.80, label="reference", zorder=4)
+    ax.plot(x_opt[:, 0], x_opt[:, 1], color=blue, linewidth=2.5,
+            label="optimized nominal", zorder=5)
+    ax.scatter([0.0, 10.0], [0.0, 0.0], s=[30, 36], color="#202b35", zorder=6)
+    ax.text(-0.25, -0.42, "start", color="#202b35", fontsize=8)
+    ax.text(9.68, -0.42, "goal", color="#202b35", fontsize=8)
+    ax.set_xlim(-0.9, 10.9)
+    ax.set_ylim(-3.0, 3.0)
+    ax.set_aspect("equal", adjustable="box")
     ax.set_axis_off()
-    ax.legend(handles=[
-        Line2D([], [], color=orange, linestyle="--", linewidth=1.6, label="reference"),
-        Line2D([], [], color=blue, linewidth=2.6, label="optimized nominal"),
-        Line2D([], [], color=teal, linewidth=7.0, alpha=0.28, label="tube"),
-        Line2D([], [], color=red, linewidth=0.8, alpha=0.45, label="noisy rollouts"),
-    ], loc="upper left", bbox_to_anchor=(0.025, 0.96), frameon=False, fontsize=9)
+    fig.subplots_adjust(left=0.03, right=0.98, bottom=0.05, top=0.93)
     return fig
 
 
