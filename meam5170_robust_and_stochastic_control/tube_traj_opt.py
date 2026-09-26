@@ -27,7 +27,8 @@ from scipy.optimize import minimize
 DT = 0.10
 HORIZON = 40
 TOTAL_TIME = DT * HORIZON
-RW = 0.020  # radius of the additive disturbance ball in R^4
+Q_TARGET = (1.0 / 3.0) ** (1.0 / 20.0)
+RW_PHYSICAL = 0.045846943848  # raw-state disturbance-ball radius
 GAMMA = 0.70
 SEED = 5170
 Y_AMPLITUDE = 2.0
@@ -82,8 +83,34 @@ def minimum_jerk_reference(
 
 def make_pd_gain() -> np.ndarray:
     """Fixed negative-feedback PD gain, duplicated for x and y axes."""
-    kp, kd = 0.8597, 2.8055
+    kp = 4.0
+    kd = (1.0 + 0.5 * DT**2 * kp - Q_TARGET**2) / DT
     return np.array([[-kp, 0.0, -kd, 0.0], [0.0, -kp, 0.0, -kd]])
+
+
+def make_tube_metric(a: np.ndarray, b: np.ndarray, k: np.ndarray) -> tuple[
+    np.ndarray, float, float, float
+]:
+    """Return T, q, transformed noise radius, and position projection scale.
+
+    The unit ball is defined in transformed error coordinates z = T e.  For
+    the identical x/y axes, T is the same 2-by-2 position/velocity metric on
+    each axis.  Its first two rows' inverse determine the isotropic physical
+    position radius of alpha * E.
+    """
+    f = a + b @ k
+    f_axis = f[np.ix_([0, 2], [0, 2])]
+    eigvals, eigvecs = np.linalg.eig(f_axis)
+    complex_index = int(np.argmax(eigvals.imag))
+    v = eigvecs[:, complex_index]
+    basis = np.column_stack((v.real, -v.imag))
+    t_axis = np.linalg.inv(basis)
+    t = np.kron(t_axis, np.eye(2))
+    t_inv = np.linalg.inv(t)
+    q = float(np.linalg.norm(t @ f @ t_inv, 2))
+    transformed_noise_radius = float(np.linalg.norm(t, 2) * RW_PHYSICAL)
+    position_projection_scale = float(np.linalg.norm(t_inv[:2, :], 2))
+    return t, q, transformed_noise_radius, position_projection_scale
 
 
 def rollout(x0: np.ndarray, controls: np.ndarray, a: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -148,16 +175,21 @@ def feasible_initial_guess(
 
 
 def solve_tube_problem() -> dict[str, np.ndarray | float | object]:
-    """Set up and solve the nonlinear program from the tube-TO slide."""
+    """Set up and solve the nonlinear program from the tube-TO slide.
+
+    The additive disturbance is a raw-state Euclidean ball of radius
+    ``RW_PHYSICAL``.  In z = T e coordinates it is conservatively bounded by
+    ``RW_Z = ||T||_2 RW_PHYSICAL`` and the tube recursion uses that radius.
+    """
     a, b = double_integrator_matrices()
     k = make_pd_gain()
     closed_loop = a + b @ k
-    contraction = float(np.linalg.norm(closed_loop, 2))
+    metric, contraction, rw_z, position_scale = make_tube_metric(a, b, k)
     time, x_ref, u_ref = minimum_jerk_reference()
     x0 = np.zeros(4)
     target = np.array([10.0, 0.0, 0.0, 0.0])
     x_guess, u_guess, alpha_guess = feasible_initial_guess(
-        x_ref, u_ref, a, b, target, RW, contraction
+        x_ref, u_ref, a, b, target, rw_z, contraction
     )
 
     n_x = (HORIZON + 1) * 4
@@ -190,7 +222,7 @@ def solve_tube_problem() -> dict[str, np.ndarray | float | object]:
 
     def tube_slack(z: np.ndarray) -> np.ndarray:
         _, _, alpha = unpack(z)
-        return alpha[1:] - contraction * alpha[:-1] - RW
+        return alpha[1:] - contraction * alpha[:-1] - rw_z
 
     z0 = np.concatenate((x_guess.ravel(), u_guess.ravel(), alpha_guess))
     bounds = [(None, None)] * (n_x + n_u) + [(0.0, None)] * (HORIZON + 1)
@@ -213,6 +245,12 @@ def solve_tube_problem() -> dict[str, np.ndarray | float | object]:
     print(f"Max dynamics residual: {np.max(np.abs(dynamics_error)):.3e}")
     print(f"Minimum tube slack: {np.min(tube_slack(result.x)):.3e}")
     print(f"Final state: {x_opt[-1]} | alpha_T: {alpha_opt[-1]:.4f}")
+    midpoint_ratio = alpha_opt[HORIZON // 2] / alpha_opt[-1]
+    print(f"Metric q = ||T(A+BK)T^-1||_2: {contraction:.7f}")
+    print(f"Noise radius: raw={RW_PHYSICAL:.6f}, transformed={rw_z:.6f}")
+    print(f"Position projection scale: {position_scale:.6f}")
+    print(f"Physical tube radii: alpha_20={alpha_opt[HORIZON // 2] * position_scale:.4f}, "
+          f"alpha_T={alpha_opt[-1] * position_scale:.4f}, midpoint/end={midpoint_ratio:.4f}")
     if not result.success or np.max(np.abs(equalities(result.x))) > 2e-5:
         raise RuntimeError("Tube trajectory optimization did not satisfy its constraints")
     return {
@@ -225,17 +263,21 @@ def solve_tube_problem() -> dict[str, np.ndarray | float | object]:
         "A": a,
         "B": b,
         "K": k,
+        "T": metric,
         "contraction": contraction,
+        "rw_z": rw_z,
+        "position_scale": position_scale,
+        "rw_physical": RW_PHYSICAL,
         "result": result,
     }
 
 
 def make_figure(data: dict[str, np.ndarray | float | object]) -> plt.Figure:
-    """Draw the planar reference, nominal, and the union of alpha disks."""
+    """Draw the planar reference, nominal, and physical position tube disks."""
     plt.rcParams.update({"font.family": "Roboto", "font.size": 10})
     x_ref = data["x_ref"]
     x_opt = data["x"]
-    alpha = data["alpha"]
+    alpha = data["alpha"] * data["position_scale"]
     fig, ax = plt.subplots(figsize=(12.0, 6.0), facecolor="white")
     blue, orange, teal = "#2468a2", "#d8873d", "#2a9d8f"
 
@@ -250,8 +292,8 @@ def make_figure(data: dict[str, np.ndarray | float | object]) -> plt.Figure:
     ax.plot(x_opt[:, 0], x_opt[:, 1], color=blue, linewidth=2.5,
             label="optimized nominal", zorder=5)
     ax.scatter([0.0, 10.0], [0.0, 0.0], s=[30, 36], color="#202b35", zorder=6)
-    ax.text(-0.25, -0.42, "start", color="#202b35", fontsize=8)
-    ax.text(9.68, -0.42, "goal", color="#202b35", fontsize=8)
+    ax.text(-0.60, -0.95, "start", color="#202b35", fontsize=11)
+    ax.text(9.45, -0.95, "goal", color="#202b35", fontsize=11)
     ax.set_xlim(-0.9, 10.9)
     ax.set_ylim(-3.0, 3.0)
     ax.set_aspect("equal", adjustable="box")
