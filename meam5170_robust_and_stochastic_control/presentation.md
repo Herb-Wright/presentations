@@ -18,6 +18,7 @@ header-includes:
     \setbeamerfont{structure}{family=\sffamily}
     \setbeamersize{text margin left=1cm,text margin right=1cm}
     \setbeamertemplate{frametitle}{\nointerlineskip\vspace*{0.5cm}\begin{beamercolorbox}[leftskip=0pt,rightskip=0pt]{frametitle}\usebeamerfont{frametitle}\insertframetitle\par\end{beamercolorbox}\vspace*{0cm}}
+    \setbeamerfont{footnote}{size=\tiny}
     \setbeamertemplate{footline}[page number]
     \setbeamerfont{page number in head/foot}{size=\normalsize}
     \setbeamertemplate{caption}{}
@@ -37,6 +38,12 @@ Here is a general form of discrete-time trajectory optimization:
     \text{s.t.} &\; x_{t+1} = f(x_t, u_t), \quad x_0 = x_\text{init},
 \end{align*}
 
+<!-- 
+Notes:
+- we often add extra constraints (x \in X, u \in U, etc.)
+- if our costs are convex quadratic and our constraints and dynamics are linear, it is a QP
+ -->
+
 # A Quadrotor Example
 
 Say we want to find a minimum length trajectory for a quadrotor to get from point A to point B:
@@ -44,6 +51,13 @@ Say we want to find a minimum length trajectory for a quadrotor to get from poin
 ![.](image.png){width=50%}
 
 **Question:** *what could go wrong?*
+
+<!-- 
+Notes:
+- a little bit of wind could blow us into the wall
+- we may misjudge our position or the position of the wall
+- we may not be able to follow the path exactly
+ -->
 
 # Defining a Stochastic Control System
 
@@ -55,18 +69,21 @@ $$ x_{t+1} = f(x_t, u_t, w_t), \qquad x_0 \sim p(x_0), $$
 where $w_t$ is a random process.
 
 <!-- 
-NOTE: can model things like disturbances, parameter uncertainty, etc
-Also, w_t don't need to be independent.
+Note: 
+- this is a general formulation and can model things like disturbances, parameter uncertainty, etc
+- similarly, w_t don't need to be independent.
 -->
 
 # Continuous vs Discrete
 
 We can talk about stochastic systems in either continuous or discrete time. For simplicity, this lecture mostly focuses on discrete time. 
 
-In continuous time, you deal with **stochastic differential equations**, and have to worry about Itô's lemma, which describes how the chain rule works for SDE's.
+In continuous time, you deal with **stochastic differential equations**[^1], and have to worry about Itô's lemma, which describes how the chain rule works for SDE's.
 
 <!-- *For example,* if $W_t$ is brownian noise, it follows from Itô's lemma that:
 $$ d\Big[W_t^2\Big] = 2 W_t d W_t + dt $$ -->
+
+[^1]: Oksendal, Bernt. Stochastic differential equations: an introduction with applications. Springer Science & Business Media, 2013.
 
 # Example: Stochastic LTI
 
@@ -95,6 +112,8 @@ $$ x_{t+1} = (A + BK) x_t + w_t, \qquad w_t \sim \mathcal N(0, \Sigma) \text{ I.
 
 <!-- 
 ANSWER: x_t \to N(0, P), where P satisfies P = A_* P A_*^T + \Sigma.
+
+This could be derived fairly easily
 -->
 
 # Example: Polytope Uncertainty and LTI
@@ -118,20 +137,37 @@ We can track the convex polytope $\mathcal X_{t}$ by its vertices $\{v_x^{(1)}, 
 2. For each $x \in X_{t-1}$ and $w \in W$, add $x + w$ to $X_t$
 3. filter out points in the interior of $\text{Hull}(X_t)$. -->
 
+<!-- 
+Notes:
+- scales like O(N^T)
+ -->
+
 # Zonotopes
 
-Things are easier if our sets are *Zonotopes*, defined:
+Things are easier if our sets are *Zonotopes*[^2], defined:
 $$ \mathcal Z(c, G) = \left\{c + \sum_{i=1}^m z_i g_i: z_i \in [-1, 1]\right\}$$
 Then, the Minkowski sum becomes:
 $$ \mathcal Z(c, G) \oplus \mathcal Z(c', G') = \mathcal Z(c + c', [G,\;G']) $$
 So, if $\mathcal X_t = \mathcal Z(c_x, G_x)$ and $\mathcal W = \mathcal Z(c_w, G_w)$, we get:
 $$ \mathcal X_{t+1} = \mathcal Z\Big((A + BK) c_x + c_w, \big[(A + BK)G_x,\;G_w\big]\Big) $$
 
+<!-- 
+Notes:
+- scales like O(NT)
+ -->
+
+[^2]: Girard, Antoine. "Reachability of uncertain linear systems using zonotopes." HSCC. Vol. 3414. 2005.
+
 # Example: Zonotope evolution
 
 ![.](./zlti.png){width=80%}
 
 **Takeaway:** *We can think about propagating sets through dynamics to model uncertainty*
+
+<!-- 
+Notes: 
+- Ask: does a stable A + BK mean that we will converge to a specific set?  (yes) 
+ -->
 
 
 # Example: Manipulator Equations with Uncertainty
@@ -153,14 +189,17 @@ We might want to separate random parameters $\xi$ that remain constant over time
 $$ x_{t+1} = f(x_t, u_t, w_t, \xi), \qquad x_0 \sim p(x_0) $$
 where $\xi$ is a random variable
 
-**Note:** *Random parameters can be wrapped into the state by creating an augmented state (but then your controller loses full observability)* 
+**Note:** *Random parameters can be wrapped into the state by creating an augmented state (but then you might lose full observability)* 
 
+<!-- 
+Note: I could show this / write it down
+ -->
 
 # Stochastic and Robust Optimal Control
 
 $$ x_{t+1} = f(x_t, u_t, w_t), \qquad x_0 \sim p(x_0), $$
 
-Let $\pi \in \Pi$ be a (possibly time-varying) policy (for trajectory optimization, this is the control inputs $u_0, u_1, ..., u_{T-1}$).
+Let $\pi \in \Pi$ be a (possibly time-varying) policy (for trajectory optimization, this is parameterized by the inputs $u_0, u_1, ..., u_{T-1}$).
 
 Let $J(\pi; w_{0:T-1})$ be a cost function over policies based on $w_{0:T-1}$. 
 
@@ -171,6 +210,10 @@ $$ \min_{\pi \in \Pi} \; \mathbb E_w J(\pi; w_{0:T-1}) $$
 
 Worst case?
 $$ \min_{\pi \in \Pi} \; \max_{w_{0:T-1} \in \mathcal W} J(\pi; w_{0:T-1}) $$
+
+<!-- 
+Note: As a over simplification, stochastic control defaults to average case and robust control defaults to worst case
+ -->
 
 # Ex: Stoch. Trajectory Optimization via Sampling
 
@@ -187,8 +230,9 @@ An easy way to approximate this is to sample $\left\{w^{(i)}_t\right\}$ and solv
 
 **Question:** *why might sharing the $u_t$ between samples be conservative?*
 
-<!-- **Question:** *does this work for the robust version?* -->
+<!-- Answer: because we will be able to do feedback when rolling it out.  -->
 
+<!-- **Question:** *does this work for the robust version?* -->
 
 # Example: Robust TO with Finite Uncertainty Set
 
@@ -200,14 +244,16 @@ If our uncertainty is drawn from a finite set, $\{ \xi^{(1)}, ..., \xi^{(n)} \}$
 
 **Question:** *why doesn't this work for sampling from an uncertainty set?*
 
+
+
 # Example: Tube Trajectory Optimization
 
 Consider a bounded uncertainty set $\mathcal W$ and linearized dynamics around a nominal trajectory with error feedback.
 
-We want to optimize a *tube* around it so that we are guaranteed to remain in the tube. We pick an invariant set $\mathcal E$ and can formulate:
+We want to optimize a *tube* around it so that we are guaranteed to remain in the tube[^3]. We pick an template set $\mathcal E$ and can formulate:
 \begin{align*}
     \min_{\bar x_{0:T}, \bar u_{0:T-1}, \alpha_{0:T}} &\; c_T(\bar x_T) + \sum_{t=0}^{T-1} c(\bar x_t, \bar u_t) + \sum_{t=1}^T \gamma \alpha_t \\
-    \text{s.t.} &\; \bar x_{t+1} = A_t \bar x_t + B_t \bar u_t \quad \bar x_0 = x_\text{init} \\
+    \text{s.t.} &\; \bar x_{t+1} = A_t \bar x_t + B_t \bar u_t + d_t \bar u_t \qquad \bar x_0 = x_\text{init} \\
     &\; \alpha_{t+1} \mathcal E \supseteq (A_t + B_t K_t) (\alpha_t \mathcal E) \oplus \mathcal W \quad \alpha_t \geq 0 \\
     &\; \bar x_t + \alpha_t \mathcal E \subseteq \mathcal X, \quad \bar u_t + K_t (\alpha_t \mathcal E) \subseteq \mathcal U 
 \end{align*}
@@ -215,6 +261,7 @@ We want to optimize a *tube* around it so that we are guaranteed to remain in th
 If $\mathcal E = \{x \in \mathbb R^d: \|x\| \leq 1\}$ and $\mathcal W$ has radius $r_w$, the tube dynamics constraint becomes:
 $$ \alpha_{t+1} \geq \| A_t + B_t K_t \|_2 \alpha_t + r_w $$
 
+[^3]: Raković, Saša V., et al. "Homothetic tube model predictive control." Automatica 48.8 (2012): 1631-1638.
 
 # Example: Tube Trajectory Optimization
 
@@ -230,23 +277,28 @@ However, a hard constraint like:
 $$ g(x_t, u_t) \leq 0 $$
 might not be feasible in stochastic systems (e.g. Gaussian noise)
 
-Instead, we can express a *chance constraint* as:
+Instead, we can express a *chance constraint*[^4] as:
 $$ P\left[g(x_t, u_t, w_t) \leq 0\right] \geq 1-\alpha $$
+
+[^4]: Charnes, Abraham, and William W. Cooper. "Chance-constrained programming." Management science 6.1 (1959): 73-79.
 
 # How to Actually Solve Chance Constraints
 
-Consider traj. opt. with a linear chance constraint for $a^\top x + b^\top u \leq c$:
+Consider TO with a linear chance constraint for $a^\top x + b^\top u \leq c$:
 \begin{align*}
-    \min_{X_{0:T}, u_{0:T-1}} &\; \mathbb E \left[ c_T(X_T) + \sum_{t=0}^{T-1} c(X_t, u_t) \right] \\
+    \min_{X_{0:T}, u_{0:T-1}} &\; \mathbb E \left[ c_T(X_T) + \sum c(X_t, u_t) \right] \\
     \text{s.t.} &\; X_{t+1} = f(X_t, u_t, W_t), \quad X_0 = x_\text{init} \\
     &\; P\left[ a^\top X_t + b^\top u_t \leq c \right] \geq 1-\alpha
 \end{align*}
 For linear dynamics and Gaussian distributions, the constraint is:
 $$ a^\top \mu_{X_t} + \Phi^{-1} (1 - \alpha) \sqrt{a^\top \Sigma_{X_t} a} + b^\top u_t \leq c$$
-
-We can sample to solve a general chance constraint for small $\alpha$:
+We can sample to solve certain chance constraints for small $\alpha$:
 $$ g(x^{(i)}_t, u_t, w^{(i)}_t) \leq 0, \quad \forall i, t $$
-If we have at least $M^*(\alpha, \delta, d)$ samples, then if we satisfy these constraints, the chance constraint is satisfied w.p. at least $1-\delta$.
+Need $M^*$ samples, for $1-\delta$ prob of constraint satisfaction.[^5]
+
+.
+
+[^5]: Calafiore, Giuseppe Carlo, and Marco C. Campi. "The scenario approach to robust control design." IEEE Transactions on automatic control 51.5 (2006): 742-753.
 
 <!-- - sampling
 - propogate a parametric distribution (e.g. Gaussian) and put quantile constraints
@@ -258,14 +310,17 @@ Let $w_0, w_1, ...$ be IID from $p(w)$.
 
 Consider cost $c(x, u, w)$. 
 
-The cost-to-go or value function is:
+The cost-to-go or value function is:[^6]
 \begin{align*}
-V(x) &\;= \min_{\pi} \mathbb E_{w_{0:\infty}} \left[\sum^\infty_{t=0} \gamma^t c(x_t, u_t)\right] \\
-&\;= \min_u \mathbb E_w \left[ c(x, u, w) + \gamma \min_{\pi} \mathbb E_{w_{1:\infty}}\left[ \sum_{t=1}^\infty \gamma^{t-1} c(x_t, u_t) \right]   \right] \\
-&\;= \min_u \mathbb E_w \Big[c(x, u, w) + \gamma V(f(x, u, w))\Big]
+V(x&)\;= \min_{\pi} \mathbb E_{w_{0:\infty}} \left[\sum^\infty_{t=0} \gamma^t c(x_t, u_t, w_t)\right] \\
+&= \min_u \mathbb E_w \left[ c(x, u, w) + \gamma \min_{\pi} \mathbb E_{w_{1:\infty}}\left[ \sum_{t=1}^\infty \gamma^{t-1} c(x_t, u_t, w_t) \right]   \right] \\
+&= \min_u \mathbb E_w \Big[c(x, u, w) + \gamma V(f(x, u, w))\Big]
 \end{align*}
 
 **Question:** *why did we assume IID disturbance?*
+
+[^6]: Bertsekas, Dimitri P., et al. Dynamic programming and optimal control. Vol. 1. No. 2. Belmont, MA: Athena scientific, 1995.
+
 
 # Robust Value Function
 
@@ -275,7 +330,7 @@ With a cost $c(x, u, w)$, we can similarly derive a Bellman equation:
 $$ V(x) = \min_u \max_w \Big\{ c(x, u, w) + \gamma V(f(x, u, w)) \Big\} $$
 
 
-# Example: Stochastic LQR
+# Example: Stochastic LQR [^7]
 
 $$ x_{t+1} = A x_t + B u_t + w_t, \qquad w_t \sim \mathcal N(0, \Sigma) $$
 Consider the cost: 
@@ -284,6 +339,8 @@ for $Q = Q^\top \succeq 0$ and $R = R^\top \succ 0$.
 
 Then, our value function is:
 $$ V(x) = \min_u \mathbb E_w \left[ x^\top Q x + u^\top R u + \gamma V(Ax + Bu + w) \right] $$
+
+[^7]: Anderson, Brian DO, and John B. Moore. Optimal control: linear quadratic methods. Courier Corporation, 2007.
 
 # Example: Stochastic LQR
 Let's assume our optimal policy is $u_t = K x_t$
@@ -340,9 +397,12 @@ P_{t|t} &= (I-L_tC)P_{t|t-1}, \\
 u_t &= K^* \hat{x}_{t|t}.
 \end{align*}
 
-# The Margins of LQG
+
+# The Margins of LQG[^8]
 
 ![.](image-1.png)
+
+[^8]: Doyle, John. "Guaranteed margins for LQG regulators." IEEE Transactions on automatic Control 23.4 (1978): 756-757.
 
 # $H_\infty$ Control
 
@@ -352,8 +412,10 @@ $$ \dot x(t) = f_\pi (x(t), w(t)), \qquad z(t) = h_\pi (x(t), w(t)) $$
 Define a norm over a time-varying function:
 $$ \left\| x(\cdot) \right\|_{L_2} = \sqrt{\int_0^\infty x(t)^\top x(t) dt} $$
 
-The $H_\infty$ problem is then (assume $x(0) = 0$):
+The $H_\infty$ problem is then (assume $x(0) = 0$):[^9]
 $$ \min_{\pi \in \Pi} \; \max_{\|w\|_{L_2} \neq 0} \; \frac{\|z(\cdot)\|_{L_2}}{\|w(\cdot)\|_{L_2}} $$
+
+[^9]: Zhou, Kemin, John Comstock Doyle, and Keith Glover. Robust and optimal control. Vol. 40. New Jersey: Prentice hall, 1996.
 
 # Lyapunov Functions as Certificates in $H_\infty$ Control
 
@@ -390,12 +452,14 @@ $$ \operatorname{CVaR}_\alpha(J) = \mathbb E[J \mid J \ge \operatorname{VaR}_\al
 
 # Distributionally Robust Control
 
-We could also strike a balance between worst-case and expectational objectives by minimizing over an *ambiguity set* of distributions:
+We could also strike a balance between worst-case and expectational objectives by minimizing over an *ambiguity set* of distributions:[^10]
 $$ \min_\pi \max_{Q \in \mathcal{Q}} \mathbb{E}_Q \left[J(\pi; w)\right] $$
 where $\mathcal{Q}$ is a set of probability distributions.
 
 **Example:** A KL ball:
 $$ \mathcal{Q} = \left\{ Q \in \Delta^{\mathcal{W}} : D_\text{KL}(Q \| P) \leq \epsilon \right\} $$
+
+[^10]: Rahimian, Hamed, and Sanjay Mehrotra. "Frameworks and results in distributionally robust optimization." Open Journal of Mathematical Optimization 3 (2022): 1-85.
 
 # Conclusion
 
@@ -408,7 +472,7 @@ $$ \mathcal{Q} = \left\{ Q \in \Delta^{\mathcal{W}} : D_\text{KL}(Q \| P) \leq \
 - More variables; more hyperparameters
 - Often non-convex.
 
-**There are many practical techniques for solving**
+**There are many methods and techniques for solving**
 
 - Linearizing systems with Gaussian noise or Zonotopes
 - Sampling
